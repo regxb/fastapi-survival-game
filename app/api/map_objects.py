@@ -12,7 +12,7 @@ from app.services.map_objects import MapObjectResponseService, MapObjectService
 router = APIRouter(prefix="/map", tags=["Map"])
 
 
-@router.get("")
+@router.get("/")
 async def get_map(map_id: int, session:AsyncSession = Depends(get_async_session)):
     return await MapObjectResponseService(map_id, session).make_map_data_response()
 

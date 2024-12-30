@@ -4,37 +4,31 @@ from sqlalchemy import select, and_, or_, not_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.crud.base import CRUDBase
 from app.models.map_objects import Map, MapObject
-from app.schemas.map_objects import MapObjectCreateSchema
+from app.schemas.map_objects import MapObjectCreateSchema, MapCreateSchema
+
+CRUDMapObject = CRUDBase[MapObject, MapObjectCreateSchema]
+base_crud_map_object = CRUDMapObject(MapObject)
+CRUDMap = CRUDBase[Map, MapCreateSchema]
+base_crud_map = CRUDMap(Map)
 
 
-async def get_map_objects(map_id: int, session: AsyncSession) -> Sequence[MapObject]:
-    stmt  = (select(MapObject).
-             options(
+async def get_map_objects(session: AsyncSession, map_id: int) -> Sequence[MapObject]:
+    stmt = (select(MapObject).
+            options(
         joinedload(MapObject.type),
     ).
-             where(MapObject.map_id == map_id))
+            where(MapObject.map_id == map_id))
     result = await session.execute(stmt)
     map_objects = result.scalars().all()
     return map_objects
 
 
-async def get_map(map_id: int, session: AsyncSession):
-    stmt = select(Map).where(Map.id == map_id)
-    game_map = await session.scalar(stmt)
-    return game_map
-
-
-async def add_object_on_map(object_data: MapObjectCreateSchema, session: AsyncSession):
-    new_object = MapObject(**object_data.model_dump())
-    session.add(new_object)
-    await session.commit()
-    return new_object
-
-
-async def check_placement_on_map(x: int, y: int, height: int, width: int, map_id: int, session: AsyncSession):
+async def check_placement_on_map(
+        session: AsyncSession, x: int, y: int, height: int, width: int, map_id: int) -> bool:
     stmt = (select(MapObject).
-            where(and_(
+    where(and_(
         MapObject.map_id == map_id,
         not_(
             or_(
@@ -47,4 +41,4 @@ async def check_placement_on_map(x: int, y: int, height: int, width: int, map_id
     )))
     result = await session.execute(stmt)
     map_objects = result.scalars().all()
-    return map_objects
+    return False if map_objects else True
