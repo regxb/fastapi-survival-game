@@ -2,7 +2,6 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
-from app.models.maps import MapObject
 
 
 class Player(Base):
@@ -15,14 +14,14 @@ class Player(Base):
     map_object_id: Mapped[int] = mapped_column(ForeignKey('map_objects.id'), nullable=True)
 
     map_object: Mapped["MapObject"] = relationship(back_populates="player")
+    user: Mapped["User"] = relationship(back_populates="players")
 
 
 class Resource(Base):
     __tablename__ = 'resources'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    wood: Mapped[str]
-    stone: Mapped[str]
+    name: Mapped[str]
 
 
 class Inventory(Base):

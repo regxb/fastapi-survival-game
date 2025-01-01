@@ -2,7 +2,9 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import maps as crud_map_object
-from app.crud.maps import get_map_with_objects as crud_get_map_with_objects, base_crud_map_object, base_crud_map
+from app.crud.maps import get_map_with_objects as crud_get_map_with_objects, base_crud_map_object, base_crud_map, \
+    create_map_object, create_object_position
+from app.crud.players import create_player_base
 from app.models.maps import Map, MapObject, PlayerBase, MapObjectPosition
 from app.schemas.maps import MapResponseSchema, MapObjectResponseSchema, MapObjectCreateSchema
 
@@ -21,6 +23,8 @@ class MapService:
 
         map_objects_response = [MapObjectResponseSchema(
             name=map_object.name,
+            map_object_id=map_object.id,
+            type=map_object.type,
             x1=map_object.position.x1,
             y1=map_object.position.y1,
             x2=map_object.position.x2,
@@ -35,32 +39,16 @@ class MapService:
 
     async def add_player_base_on_map(self, telegram_id: int, object_data: MapObjectCreateSchema):
         if await self.can_place_object(**object_data.model_dump(include={"map_id", "x1", "y1", "x2", "y2"})):
-
-            map_object = MapObject(name=f"{object_data.name} base", map_id=object_data.map_id)
-            self.session.add(map_object)
-            await self.session.flush()
-
-            object_position = MapObjectPosition(
-                map_object_id=map_object.id,
-                **object_data.model_dump(include={"x1", "y1", "x2", "y2"})
+            map_object = await create_map_object(self.session, object_data.name, object_data.map_id)
+            await create_object_position(
+                self.session, map_object.id, **object_data.model_dump(include={"x1", "y1", "x2", "y2"})
             )
-            self.session.add(object_position)
-
-            player_base = PlayerBase(
-                map_object_id=map_object.id,
-                map_id=object_data.map_id,
-                owner_id=telegram_id
-            )
-            self.session.add(player_base)
+            await create_player_base(self.session, map_object.id, map_object.map_id, telegram_id)
 
             try:
                 await self.session.commit()
-            except IntegrityError as e:
+            except IntegrityError:
                 await self.session.rollback()
-                if "foreign key constraint" in str(e.orig):
-                    raise HTTPException(status_code=400, detail="Invalid map or user reference.")
-                if "unique constraint" in str(e.orig):
-                    raise HTTPException(status_code=409, detail="Player base already exists at the given location.")
                 raise HTTPException(status_code=500, detail="Database error occurred.")
             return MapObjectResponseSchema(**object_data.model_dump(exclude={"map_id", "telegram_id"}))
 

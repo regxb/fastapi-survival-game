@@ -1,15 +1,18 @@
+import enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PlayerCreateSchema(BaseModel):
     map_id: int
 
 
-class PlayerCreateDB(BaseModel):
-    user_id: int
+class BasePlayerSchema(BaseModel):
+    id: int
     map_id: int
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerResponseSchema(BaseModel):
@@ -18,7 +21,4 @@ class PlayerResponseSchema(BaseModel):
     map_id: int
     health: int
     map_object_name: str
-    x1: Optional[int]
-    y1: Optional[int]
-    x2: Optional[int]
-    y2: Optional[int]
+    map_object_id: int

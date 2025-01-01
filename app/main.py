@@ -31,8 +31,7 @@ class UserMiddleware(BaseHTTPMiddleware):
             request.state.user = await check_auth(token)
         except HTTPException:
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
 
 app.add_middleware(UserMiddleware)

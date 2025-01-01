@@ -1,4 +1,12 @@
+from enum import Enum
+
 from pydantic import BaseModel, PrivateAttr, model_validator, Field
+
+
+class ObjectType(Enum):
+    WOOD = "wood"
+    STONE = "stone"
+    IRON = "iron"
 
 
 class MapCreateSchema(BaseModel):
@@ -22,6 +30,8 @@ class MapObjectCreateSchema(BaseModel):
 
 class MapObjectResponseSchema(BaseModel):
     name: str
+    map_object_id: int
+    type: ObjectType
     x1: int
     y1: int
     x2: int

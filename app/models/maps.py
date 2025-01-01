@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey
+import enum
+
+from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
 from app.models.base import Base
@@ -32,6 +34,8 @@ class MapObject(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     map_id: Mapped[int] = mapped_column(ForeignKey('maps.id'))
+    type: Mapped[str] = mapped_column(nullable=True)
+    is_farmable: Mapped[bool]
 
     map: Mapped["Map"] = relationship(back_populates="map_objects")
     position: Mapped["MapObjectPosition"] = relationship(back_populates="map_object")

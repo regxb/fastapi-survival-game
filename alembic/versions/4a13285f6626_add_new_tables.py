@@ -1,8 +1,8 @@
 """Add new tables
 
-Revision ID: 28310c944f98
+Revision ID: 4a13285f6626
 Revises: 
-Create Date: 2024-12-31 02:20:12.216686
+Create Date: 2025-01-02 00:36:50.078330
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '28310c944f98'
+revision: str = '4a13285f6626'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,8 +27,7 @@ def upgrade() -> None:
     )
     op.create_table('resources',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('wood', sa.String(), nullable=False),
-    sa.Column('stone', sa.String(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',
@@ -42,6 +41,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('map_id', sa.Integer(), nullable=False),
+    sa.Column('type', sa.String(), nullable=True),
+    sa.Column('is_farmable', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['map_id'], ['maps.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

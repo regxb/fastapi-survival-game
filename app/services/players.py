@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.players import base_crud_player, get_player_with_position
 from app.schemas.gameplay import PlayerMoveSchema
-from app.schemas.players import PlayerCreateSchema, PlayerCreateDB, PlayerResponseSchema
+from app.schemas.players import PlayerCreateSchema, BasePlayerSchema, PlayerResponseSchema
 
 
 class PlayerService:
@@ -18,7 +18,7 @@ class PlayerService:
         )
         if player:
             raise HTTPException(status_code=409, detail="The user already has a character on this map")
-        obj_data = PlayerCreateDB(user_id=telegram_id, map_id=player_data.map_id)
+        obj_data = BasePlayerSchema(user_id=telegram_id, map_id=player_data.map_id)
         return await base_crud_player.create(self.session, obj_data)
 
     async def get_players(self):
@@ -34,10 +34,7 @@ class PlayerService:
             map_id=player.map_id,
             health=player.health,
             map_object_name=player.map_object.name,
-            x1=player.map_object.position.x1,
-            y1=player.map_object.position.y1,
-            x2=player.map_object.position.x2,
-            y2=player.map_object.position.y2
+            map_object_id=player.map_object_id
         )
         return response
 
