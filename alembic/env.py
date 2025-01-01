@@ -6,7 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.core.database import DATABASE_URL
-from app.models import map_objects
+from app.models import maps
 from app.models import users
 from app.models import players
 from app.models.base import Base

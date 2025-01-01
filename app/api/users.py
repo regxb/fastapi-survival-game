@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_async_session
+from app.core.database import get_async_session
+from app.depends.auth import get_user_data_from_request
 from app.schemas.users import UserCreateSchema
 from app.services.users import UserService
 
@@ -10,13 +11,16 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 
 @router.post("/")
-async def create_user(user_data: UserCreateSchema, session: AsyncSession = Depends(get_async_session)):
-    return await UserService(session).create_user(user_data)
+async def create_user(user: dict = Depends(get_user_data_from_request), session: AsyncSession = Depends(get_async_session)):
+    return await UserService(session).create_user(user)
 
 @router.get("/")
-async def get_users(session: AsyncSession = Depends(get_async_session)):
-    return await UserService(session).get_users()
+async def get_users(
+        offset: int = Query(ge=0, default=0),
+        limit: int = Query(ge=0, le=100, default=100),
+        session: AsyncSession = Depends(get_async_session)):
+    return await UserService(session).get_users(offset, limit)
 
 @router.get("/{telegram_id}")
-async def get_user(telegram_id: int, session: AsyncSession = Depends(get_async_session)):
-    return await UserService(session).get_user(telegram_id)
+async def get_user(user: dict = Depends(get_user_data_from_request), session: AsyncSession = Depends(get_async_session)):
+    return await UserService(session).get_user(user["id"])
