@@ -11,3 +11,5 @@ DB_USER = os.environ.get("POSTGRES_USER")
 DB_PASS = os.environ.get("POSTGRES_PASSWORD")
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+REDIS_URL = os.environ.get("REDIS_URL")
