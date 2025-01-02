@@ -11,7 +11,7 @@ from app.api.users import router as users_router
 from app.api.players import router as players_router
 from app.api.gameplay import router as gameplay_router
 from app.depends.auth import check_auth
-
+from app.api.test import router as test_router
 app = FastAPI(dependencies=[Depends(check_auth)])
 
 app.include_router(maps_router)
@@ -19,6 +19,7 @@ app.include_router(users_router)
 app.include_router(players_router)
 app.include_router(gameplay_router)
 
+app.include_router(test_router)
 
 class UserMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
