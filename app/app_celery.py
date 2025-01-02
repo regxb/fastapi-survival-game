@@ -1,11 +1,13 @@
 from celery import Celery
 from app.core.config import REDIS_URL
+
+
 celery_app = Celery(
     "tasks",
     broker=str(REDIS_URL),
     backend=str(REDIS_URL),
     include=[
-        "tasks.notification",
+        "app.tasks.notification",
     ],
     timezone="Europe/Moscow",
 )
