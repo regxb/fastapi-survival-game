@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.players import base_crud_player, get_player_with_position
+from app.crud.players import base_crud_player, get_player_with_position, create_player
 from app.schemas.gameplay import PlayerMoveSchema
 from app.schemas.players import PlayerCreateSchema, BasePlayerSchema, PlayerResponseSchema
 
@@ -18,8 +18,8 @@ class PlayerService:
         )
         if player:
             raise HTTPException(status_code=409, detail="The user already has a character on this map")
-        obj_data = BasePlayerSchema(user_id=telegram_id, map_id=player_data.map_id)
-        return await base_crud_player.create(self.session, obj_data)
+        player = await create_player(self.session, player_data.map_id, telegram_id)
+        return player
 
     async def get_players(self):
         players = await base_crud_player.get_multi(self.session)
@@ -27,6 +27,8 @@ class PlayerService:
 
     async def get_player(self, player_id: int):
         player = await get_player_with_position(self.session, player_id)
+        if player is None:
+            raise HTTPException(status_code=404, detail="The player does not exist")
 
         response = PlayerResponseSchema(
             id=player_id,

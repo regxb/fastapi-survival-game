@@ -55,14 +55,15 @@ async def check_placement_on_map(
 
 
 async def create_map_object(session: AsyncSession, name: str, map_id: int):
-    map_object = MapObject(name=f"{name} base", map_id=map_id)
+    map_object = MapObject(name=f"{name} base", type="base", is_farmable=False, map_id=map_id)
     session.add(map_object)
     try:
         await session.flush()
     except IntegrityError:
-        raise HTTPException(status_code=404, detail="Map not found")
-    finally:
         await session.rollback()
+        raise HTTPException(status_code=404, detail="Map not found")
+    return map_object
+
 
 
 async def create_object_position(
@@ -79,6 +80,6 @@ async def create_object_position(
     try:
         await session.flush()
     except IntegrityError:
-        raise HTTPException(status_code=404, detail="Map object not found")
-    finally:
         await session.rollback()
+        raise HTTPException(status_code=404, detail="Map object not found")
+    return object_position

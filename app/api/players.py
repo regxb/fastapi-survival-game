@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.depends.auth import get_user_data_from_request
 from app.schemas.maps import MapObjectCreateSchema
-from app.schemas.players import PlayerCreateSchema
+from app.schemas.players import PlayerCreateSchema, PlayerResponseSchema
 from app.services.maps import MapService
 from app.services.players import PlayerService
 
@@ -31,8 +31,8 @@ async def get_player(player_id:int, session:AsyncSession = Depends(get_async_ses
     return await PlayerService(session).get_player(player_id)
 
 
-@router.post("/add-player-base")
-async def add_player_base_on_map(
+@router.post("/create-base")
+async def create_base(
         object_data: MapObjectCreateSchema,
         user: WebAppInitData = Depends(get_user_data_from_request),
         session: AsyncSession = Depends(get_async_session)

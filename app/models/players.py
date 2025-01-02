@@ -11,7 +11,7 @@ class Player(Base):
     health: Mapped[int] = mapped_column(default=100)
     map_id: Mapped[int] = mapped_column(ForeignKey('maps.id'))
     user_id: Mapped[int] = mapped_column(ForeignKey('users.telegram_id'))
-    map_object_id: Mapped[int] = mapped_column(ForeignKey('map_objects.id'), nullable=True)
+    map_object_id: Mapped[int] = mapped_column(ForeignKey('map_objects.id'), default=1)
 
     map_object: Mapped["MapObject"] = relationship(back_populates="player")
     user: Mapped["User"] = relationship(back_populates="players")

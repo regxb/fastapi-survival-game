@@ -22,3 +22,5 @@ class PlayerResponseSchema(BaseModel):
     health: int
     map_object_name: str
     map_object_id: int
+
+    model_config = ConfigDict(from_attributes=True)

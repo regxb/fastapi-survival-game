@@ -10,7 +10,8 @@ class Map(Base):
     __tablename__ = 'maps'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    size: Mapped[int]
+    height: Mapped[int] = mapped_column(nullable=True)
+    width: Mapped[int] = mapped_column(nullable=True)
 
     map_objects: Mapped["MapObject"] = relationship(back_populates="map")
 

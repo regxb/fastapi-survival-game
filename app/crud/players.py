@@ -13,6 +13,17 @@ CRUDPlayers = CRUDBase[Player, PlayerCreateSchema]
 base_crud_player = CRUDPlayers(Player)
 
 
+async def create_player(session: AsyncSession, map_id: int, telegram_id: int):
+    player = Player(map_id=map_id, user_id=telegram_id)
+    session.add(player)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise HTTPException(status_code=404, detail="Map not found")
+    return player
+
+
 async def get_player_with_map_object(session: AsyncSession, map_id: int, telegram_id: int):
     stmt = (select(Player).
             options(joinedload(Player.map_object)).
@@ -47,6 +58,6 @@ async def create_player_base(session: AsyncSession, map_object_id: int, map_id: 
     try:
         await session.flush()
     except IntegrityError:
-        raise HTTPException(status_code=400)
-    finally:
         await session.rollback()
+        raise HTTPException(status_code=400)
+    return player_base
