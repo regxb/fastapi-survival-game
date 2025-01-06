@@ -9,6 +9,7 @@ from app.core.database import DATABASE_URL
 from app.models import maps
 from app.models import users
 from app.models import players
+from app.models import gameplay
 from app.models.base import Base
 
 

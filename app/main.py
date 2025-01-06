@@ -1,4 +1,6 @@
-from aiogram.utils.web_app import WebAppInitData
+from contextlib import contextmanager, asynccontextmanager
+
+from aiogram.utils.web_app import WebAppInitData, WebAppUser
 from fastapi.responses import JSONResponse
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -10,16 +12,29 @@ from app.api.maps import router as maps_router
 from app.api.users import router as users_router
 from app.api.players import router as players_router
 from app.api.gameplay import router as gameplay_router
-from app.depends.auth import check_auth
-from app.api.test import router as test_router
-app = FastAPI(dependencies=[Depends(check_auth)])
+from app.core.config import BOT_TOKEN
+from app.depends.auth import check_auth, get_user_data_from_request
+from app.faststream.main import broker
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await broker.connect()
+    try:
+        yield
+    finally:
+        await broker.close()
+
+
+app = FastAPI(dependencies=[Depends(check_auth)], lifespan=lifespan)
+# app = FastAPI(lifespan=lifespan)
 
 app.include_router(maps_router)
 app.include_router(users_router)
 app.include_router(players_router)
 app.include_router(gameplay_router)
 
-app.include_router(test_router)
 
 class UserMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -32,6 +47,9 @@ class UserMiddleware(BaseHTTPMiddleware):
             request.state.user = await check_auth(token)
         except HTTPException:
             return JSONResponse(status_code=401, content={"detail": "Invalid token"})
+
+        # request.state.user = WebAppUser(first_name="Tom", username="tom", id=3, photo_url="photo_url_tom")
+
         return await call_next(request)
 
 

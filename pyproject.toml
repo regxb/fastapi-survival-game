@@ -2,8 +2,7 @@
 name = "fastapi-survival-game"
 version = "0.1.0"
 description = ""
-authors = ["Aleksey <aleksey18003@yandex.ru>"]
-readme = "README.md"
+authors = ["Aleksey"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -13,8 +12,8 @@ alembic = "^1.14.0"
 psycopg2 = "^2.9.10"
 asyncpg = "^0.30.0"
 aiogram = "^3.16.0"
-celery = "^5.4.0"
 redis = "^5.2.1"
+faststream = {extras = ["cli"], version = "^0.5.33"}
 
 
 [build-system]

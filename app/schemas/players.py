@@ -3,6 +3,9 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.gameplay import ResourceSchema
+from app.schemas.maps import MapObjectPositionSchema
+
 
 class PlayerCreateSchema(BaseModel):
     map_id: int
@@ -11,7 +14,22 @@ class PlayerCreateSchema(BaseModel):
 class BasePlayerSchema(BaseModel):
     id: int
     map_id: int
+    map_object_id: int
+    status: str
+    health: int
+    energy: int
 
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PlayerHouseSchema(BaseModel):
+    defense_level: int
+    position: Optional[MapObjectPositionSchema]
+
+
+class PlayerResourcesSchema(BaseModel):
+    resource_id: int
+    count: int
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -20,7 +38,9 @@ class PlayerResponseSchema(BaseModel):
     user_id: int
     map_id: int
     health: int
-    map_object_name: str
+    energy: int
     map_object_id: int
+    status: str
+    resources: Optional[list[PlayerResourcesSchema]]
 
     model_config = ConfigDict(from_attributes=True)

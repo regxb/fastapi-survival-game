@@ -1,10 +1,7 @@
 from datetime import datetime
-
-from sqlalchemy import DateTime, func, ForeignKey
+from sqlalchemy import DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.models.base import Base
-
 
 class User(Base):
     __tablename__ = 'users'
@@ -14,4 +11,4 @@ class User(Base):
     photo_url: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
-    players: Mapped[list["Player"]] = relationship(back_populates="user", uselist=True)
+    players: Mapped[list["Player"]] = relationship("Player", back_populates="user", uselist=True)
