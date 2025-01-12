@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import ResourceSchema
+from app.schemas.gameplay import FarmModeLevelSchema, ResourceSchema
 
 
 class ObjectType(Enum):
@@ -20,13 +20,15 @@ class MapCreateSchema(BaseModel):
 
 
 class MapObjectCreateSchema(BaseModel):
-    x1: int = Field(ge=0)
-    y1: int = Field(ge=0)
+    name: str
     map_id: int
+    is_farmable: bool
+    type: str
 
 
 class ResourceZoneSchema(BaseModel):
     resource: Optional[ResourceSchema]
+    farm_modes: Optional[list[FarmModeLevelSchema]]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +38,7 @@ class MapObjectPositionSchema(BaseModel):
     y1: int
     x2: int
     y2: int
+    map_object_id: int
 
     model_config = ConfigDict(from_attributes=True)
 

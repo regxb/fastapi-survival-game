@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic, Type, Sequence, Optional
+from typing import Generic, Optional, Sequence, Type, TypeVar
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -6,13 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 ModelType = TypeVar("ModelType")
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class CRUDBase(Generic[ModelType, CreateSchemaType]):
+class BaseRepository(Generic[ModelType]):
     def __init__(self, model: Type[ModelType]) -> None:
         self._model = model
 
@@ -21,32 +20,48 @@ class CRUDBase(Generic[ModelType, CreateSchemaType]):
         try:
             session.add(db_obj)
             await session.commit()
-        except IntegrityError:
-            await session.rollback()
-            raise HTTPException(status_code=404)
-        await session.refresh(db_obj)
+            await session.refresh(db_obj)
+        except IntegrityError as e:
+            raise HTTPException(status_code=500, detail=str(e.orig))
         return db_obj
 
     async def get_multi(
-            self, session: AsyncSession,
+            self,
+            session: AsyncSession,
             *args,
             offset: int = 0,
             limit: int = 100,
+            options: Optional[Sequence] = None,
             **kwargs
     ) -> Sequence[ModelType]:
         stmt = select(self._model).filter(*args).filter_by(**kwargs).offset(offset).limit(limit)
-        result = await session.execute(stmt)
-        return result.scalars().all()
+        if options:
+            stmt = stmt.options(*options)
 
-    async def get(self, session: AsyncSession, *args, **kwargs) -> ModelType:
-        stmt = select(self._model).filter(*args).filter_by(**kwargs)
         result = await session.execute(stmt)
-        return result.scalar_one_or_none()
+        scalars = result.scalars()
+
+        return scalars.unique().all() if options else scalars.all()
+
+    async def get(
+            self,
+            session: AsyncSession,
+            options: Optional[Sequence] = None,
+            *args,
+            **kwargs
+    ) -> ModelType:
+        stmt = select(self._model).filter(*args).filter_by(**kwargs)
+        if options:
+            stmt = stmt.options(*options)
+        result = await session.scalar(stmt)
+        # if result is None:
+        #     raise HTTPException(status_code=404, detail=f"{self._model.__name__} Not found")
+        return result
 
     async def get_by_id(self, session: AsyncSession, id: int) -> ModelType:
         db_obj = await session.get(self._model, id)
-        if db_obj is None:
-            raise HTTPException(status_code=404, detail=f"{self._model.__name__} not found")
+        # if db_obj is None:
+        #     raise HTTPException(status_code=404, detail=f"{self._model.__name__} Not found")
         return db_obj
 
     async def update(
@@ -55,7 +70,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType]):
             obj_in: UpdateSchemaType,
             db_obj: Optional[ModelType] = None,
             **kwargs):
-        db_obj = db_obj or await self.get(session,**kwargs)
+        db_obj = db_obj or await self.get(session, **kwargs)
         if db_obj is not None:
             obj_data = db_obj.__dict__
             if isinstance(obj_in, dict):

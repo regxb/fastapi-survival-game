@@ -35,6 +35,11 @@ class ResourceSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FarmResourcesSchema(BaseModel):
+    map_id: int
+    mode: FarmModeEnum
+
+
 class FarmModeLevelSchema(BaseModel):
     mode: FarmModeEnum
     total_minutes: int
@@ -52,6 +57,14 @@ class FarmModeSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FarmSessionCreateSchema(BaseModel):
+    map_id: int
+    resource_id: int
+    player_id: int
+    start_time: str
+    end_time: str
+
+
 class FarmSessionSchema(BaseModel):
     start_time: str
     end_time: str
@@ -60,8 +73,8 @@ class FarmSessionSchema(BaseModel):
 
 
 class BuildingCostSchema(BaseModel):
-    id: int
-    amount: int
+    resources: dict
+    can_build: bool
 
 
 class BuildingCostResponseSchema(BaseModel):

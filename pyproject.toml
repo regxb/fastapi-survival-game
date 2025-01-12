@@ -14,6 +14,8 @@ asyncpg = "^0.30.0"
 aiogram = "^3.16.0"
 redis = "^5.2.1"
 faststream = {extras = ["cli"], version = "^0.5.33"}
+pytest = "^8.3.4"
+pytest-asyncio = "^0.25.2"
 
 
 [build-system]
