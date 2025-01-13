@@ -4,7 +4,6 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from app.core.database import DATABASE_URL
-from app.models import gameplay_model, map_model, player_model, user_model
 from app.models.base_model import Base
 
 config = context.config
