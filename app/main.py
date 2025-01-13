@@ -11,8 +11,8 @@ from app.api.gameplay import router as gameplay_router
 from app.api.maps import router as maps_router
 from app.api.players import router as players_router
 from app.core.config import BOT_TOKEN, DEV
-from app.depends.deps import check_auth, get_user_data_from_request
-from app.faststream.main import broker
+from app.depends.deps import check_auth
+from app.broker.main import broker
 
 
 @asynccontextmanager

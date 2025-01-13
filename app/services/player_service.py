@@ -105,3 +105,16 @@ class PlayerResponseService:
         )
 
         return player_schema
+
+    async def update_energy(self):
+        where_clause = {"energy": ("<", 100)}
+
+        update_data = {"energy": Player.energy + 1}
+
+        updated_count = await repository_player.update_multiple(
+            session=self.session,
+            model=Player,
+            obj_in=update_data,
+            where_clause=where_clause,
+        )
+        print(f"Updated {updated_count} rows")

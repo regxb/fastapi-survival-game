@@ -1,8 +1,8 @@
-from typing import Generic, Optional, Sequence, Type, TypeVar
+from typing import Generic, Optional, Sequence, Type, TypeVar, Dict, Any
 
 from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select,update, and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,3 +88,54 @@ class BaseRepository(Generic[ModelType]):
                 raise HTTPException(status_code=500, detail=str(e.orig))
         await session.refresh(db_obj)
         return db_obj
+
+    @staticmethod
+    async def update_multiple(
+            session: AsyncSession,
+            model: Type[ModelType],
+            obj_in: UpdateSchemaType,
+            where_clause: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        try:
+            if isinstance(obj_in, BaseModel):
+                update_data = obj_in.model_dump(exclude_unset=True)
+            else:
+                update_data = obj_in
+
+            stmt = update(model).values(**update_data)
+
+            if where_clause:
+                conditions = []
+                for key, value in where_clause.items():
+                    if isinstance(value, tuple):  # Если значение — это кортеж (оператор, значение)
+                        operator, val = value
+                        if operator == ">":
+                            conditions.append(getattr(model, key) > val)
+                        elif operator == "<":
+                            conditions.append(getattr(model, key) < val)
+                        elif operator == ">=":
+                            conditions.append(getattr(model, key) >= val)
+                        elif operator == "<=":
+                            conditions.append(getattr(model, key) <= val)
+                        elif operator == "==" or operator == "=":
+                            conditions.append(getattr(model, key) == val)
+                        elif operator == "!=":
+                            conditions.append(getattr(model, key) != val)
+                        else:
+                            raise ValueError(f"Unsupported operator: {operator}")
+                    else:  # Если значение не кортеж, используем оператор "=" по умолчанию
+                        conditions.append(getattr(model, key) == value)
+
+                stmt = stmt.where(and_(*conditions))
+
+            result = await session.execute(stmt)
+            await session.commit()
+
+            return result.rowcount
+
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(status_code=400)
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
