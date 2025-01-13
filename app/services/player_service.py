@@ -69,3 +69,16 @@ class PlayerService:
         for resource in player_resources:
             if resource.resource_id in costs:
                 resource.count -= costs[resource.resource_id]
+
+    async def update_energy(self):
+        where_clause = {"energy": ("<", 100)}
+
+        update_data = {"energy": Player.energy + 1}
+
+        updated_count = await repository_player.update_multiple(
+            session=self.session,
+            model=Player,
+            obj_in=update_data,
+            where_clause=where_clause,
+        )
+        print(f"Updated {updated_count} rows")
