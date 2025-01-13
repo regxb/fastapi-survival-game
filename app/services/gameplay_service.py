@@ -30,6 +30,8 @@ class FarmingService:
             player_id=telegram_id,
             map_id=farm_data.map_id,
         )
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
 
         ValidationService.can_player_do_something(player)
         ValidationService.is_farmable_area(player.map_object)
@@ -71,7 +73,7 @@ class FarmingService:
             ],
             map_id=map_id,
             player_id=telegram_id)
-        if player is None:
+        if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         ValidationService.is_farmable_area(player.map_object)
         if not player.map_object.resource_zone:

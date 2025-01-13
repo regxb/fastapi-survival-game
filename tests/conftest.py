@@ -1,7 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pytest_asyncio import is_async_test
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from starlette.testclient import TestClient
 
 from app.core.database import TEST_DATABASE_URL, get_async_session
@@ -11,6 +11,13 @@ from app.models import (BuildingCost, FarmMode, Map, MapObject,
 from app.models.base_model import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+async_session_maker = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
 
 
 def pytest_collection_modifyitems(items):
@@ -25,16 +32,15 @@ async def connection_test():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        yield conn
-        await conn.rollback()
 
 
 @pytest.fixture()
 async def db_session(connection_test):
-    async_session = AsyncSession(bind=connection_test, expire_on_commit=False)
-    async with async_session as session:
+    async with async_session_maker() as session:
         await populate_bd(session)
         yield session
+        await session.rollback()
+        await session.close()
 
 
 @pytest.fixture()
@@ -78,7 +84,7 @@ async def populate_bd(db_session):
 
         # add resources
         wood = Resource(name="wood")
-        stone = Resource(name="ston")
+        stone = Resource(name="stone")
         session.add(wood)
         session.add(stone)
         await session.flush()

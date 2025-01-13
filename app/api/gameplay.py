@@ -13,7 +13,7 @@ from app.services.gameplay_service import FarmingService
 router = APIRouter(prefix="/gameplay", tags=["gameplay"])
 
 
-@router.get("/cost-of-building-base")
+@router.get("/cost-of-building-base/")
 async def get_cost_building_base(
         building_type: BuildingType,
         user: WebAppUser = Depends(get_user_data_from_request),
@@ -28,7 +28,7 @@ async def build_base(
         user: WebAppUser = Depends(get_user_data_from_request),
         session: AsyncSession = Depends(get_async_session)
 ):
-    return await BuildingService(session).create_player_base(user, object_data)
+    return await BuildingService(session).create_player_base(user.id, object_data)
 
 
 # @router.get("/choose-farm-mode/")

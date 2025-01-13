@@ -6,7 +6,6 @@ from tests.conftest import populate_bd
 
 @pytest.mark.asyncio
 async def test_create_player(client, db_session):
-    await populate_bd(db_session)
     response = await client.post("/player/", json={"map_id": 1})
     assert response.status_code == 200
     response_json = response.json()

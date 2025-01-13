@@ -9,7 +9,9 @@ from app.services.map_service import MapService
 class ValidationService:
 
     @staticmethod
-    def can_user_build(building_costs: list[BuildingCost], player_resources: list[PlayerResources]):
+    def can_player_build(building_costs: list[BuildingCost], player_resources: list[PlayerResources]):
+        if not player_resources:
+            return False
         player_resource_dict = {res.resource_id: res.count for res in player_resources}
         for cost in building_costs:
             if player_resource_dict.get(cost.resource_id, 0) < cost.quantity:
@@ -18,8 +20,6 @@ class ValidationService:
 
     @staticmethod
     def can_player_do_something(player: Player):
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
         if player.status != "waiting":
             raise HTTPException(status_code=400, detail="The player is currently doing some action")
         if not player or player.map_id is None:
@@ -31,7 +31,7 @@ class ValidationService:
     ):
         if not await MapService(session).area_is_free(map_id, x1, y1, x2, y2):
             raise HTTPException(status_code=409, detail="The place is already taken")
-        ValidationService.can_user_build(building_costs, player_resources)
+        ValidationService.can_player_build(building_costs, player_resources)
 
     @staticmethod
     def is_farmable_area(map_object) -> None:

@@ -40,8 +40,8 @@ class PlayerService:
             map_id=map_id,
             player_id=telegram_id
         )
-        if player is None:
-            raise HTTPException(status_code=404, detail="The player does not exist")
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
         in_base = player.map_object_id == player.base.map_object_id if player.base else False
         player_data = PlayerSchema(in_base=in_base, **player.__dict__)
         resources = {resource.resource.name: resource.count for resource in player.resources}
@@ -50,6 +50,8 @@ class PlayerService:
 
     async def move_player(self, telegram_id: int, player_data: PlayerMoveSchema):
         player = await repository_player.get(self.session, map_id=player_data.map_id, player_id=telegram_id)
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
         ValidationService.can_player_do_something(player)
         if player.map_object_id == player_data.map_object_id:
             raise HTTPException(status_code=409, detail="The user is already at this place")

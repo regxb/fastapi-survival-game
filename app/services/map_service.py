@@ -29,8 +29,6 @@ class MapService:
                 joinedload(Map.map_objects).joinedload(MapObject.resource_zone).joinedload(ResourcesZone.farm_modes)
             ],
             id=map_id)
-        if not map_objects:
-            raise HTTPException(status_code=404, detail="Map not found")
         return MapResponseSchema.model_validate(map_objects)
 
     async def create_player_base_map_object(self, name: str, map_id: int):

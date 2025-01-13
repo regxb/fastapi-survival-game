@@ -3,9 +3,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_get_maps(client, db_session):
-    response = await client.get(
-        "/map/"
-    )
+    response = await client.get("/map/")
     assert response.status_code == 200
     response_json = response.json()
     assert len(response_json) == 2

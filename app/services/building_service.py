@@ -25,17 +25,19 @@ class BuildingService:
 
     async def create_player_base(
             self,
-            user: WebAppUser,
+            telegram_id: int,
             object_data: PlayerBaseCreateSchema,
     ) -> MapObject:
-        player = await repository_player.get(self.session, player_id=user.id, map_id=object_data.map_id)
+        player = await repository_player.get(self.session, player_id=telegram_id, map_id=object_data.map_id)
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
         ValidationService.can_player_do_something(player)
         if await repository_player_base.get(self.session, owner_id=player.id, map_id=object_data.map_id):
             raise HTTPException(status_code=400, detail="Player already has a base on this map")
 
         building_costs = await repository_building_cost.get_multi(self.session, type="base")
         player_resources = await repository_player_resource.get_multi(self.session, player_id=player.id)
-        if not ValidationService.can_user_build(building_costs, player_resources):
+        if not ValidationService.can_player_build(building_costs, player_resources):
             raise HTTPException(status_code=400, detail="Not enough resources")
 
         x1, y1 = object_data.x1, object_data.y1
@@ -45,7 +47,7 @@ class BuildingService:
         if not await map_service.area_is_free(object_data.map_id, x1, y1, x2, y2):
             raise HTTPException(status_code=409, detail="The place is already taken")
 
-        new_map_object = await map_service.create_player_base_map_object(user.username, object_data.map_id)
+        new_map_object = await map_service.create_player_base_map_object(player.name, object_data.map_id)
         await map_service.add_position_to_map_object(x1, y1, x2, y2, new_map_object.id)
         await repository_player_base.create(
             self.session,
@@ -60,7 +62,7 @@ class BuildingService:
         await BaseService.commit_or_rollback(self.session)
         return new_map_object
 
-    async def get_cost_building_base(self, building_type: str, telegram_id: int) -> BuildingCostResponseSchema:
+    async def get_cost_building_base(self, building_type: str, telegram_id: int) -> BuildingCostSchema:
         costs = await repository_building_cost.get_multi(
             self.session,
             options=[joinedload(BuildingCost.resource)],
@@ -72,6 +74,8 @@ class BuildingService:
             self.session,
             options=[joinedload(Player.resources)],
             player_id=telegram_id)
-        can_build = ValidationService.can_user_build(costs, player.resources)
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+        can_build = ValidationService.can_player_build(costs, player.resources)
         resources = {cost.resource.name: cost.quantity for cost in costs}
         return BuildingCostSchema(can_build=can_build, resources=resources)
