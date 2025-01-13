@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict
@@ -61,13 +62,14 @@ class FarmSessionCreateSchema(BaseModel):
     map_id: int
     resource_id: int
     player_id: int
-    start_time: str
-    end_time: str
+    start_time: datetime
+    end_time: datetime
 
 
 class FarmSessionSchema(BaseModel):
-    start_time: str
-    end_time: str
+    start_time: datetime
+    end_time: datetime
+    time_left: dict
 
     model_config = ConfigDict(from_attributes=True)
 

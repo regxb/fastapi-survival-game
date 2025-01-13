@@ -1,7 +1,6 @@
 import pytest
 
 from app.models import Player
-from tests.conftest import populate_bd
 
 
 @pytest.mark.asyncio
@@ -48,3 +47,33 @@ async def test_move_player(client, db_session):
     assert response.status_code == 200
     response_json = response.json()
     assert response_json["new_map_object_id"] == 2
+
+
+@pytest.mark.asyncio
+async def test_create_player_on_non_exist_map(client):
+    response = await client.post("/player/", json={"map_id": 10})
+    assert response.status_code == 500
+    response_json = response.json()
+    assert "asyncpg.exceptions.ForeignKeyViolationError" in response_json["detail"]
+
+
+@pytest.mark.asyncio
+async def test_move_player_on_non_exist_object(client, db_session):
+    player = Player(map_id=1, player_id=1, name="test_name")
+    db_session.add(player)
+    await db_session.commit()
+    response = await client.patch("/player/move-player/", json={"map_id": 1, "map_object_id": 22})
+    assert response.status_code == 500
+    response_json = response.json()
+    assert "asyncpg.exceptions.ForeignKeyViolationError" in response_json["detail"]
+
+
+@pytest.mark.asyncio
+async def test_move_player_on_non_exist_map(client, db_session):
+    player = Player(map_id=1, player_id=1, name="test_name")
+    db_session.add(player)
+    await db_session.commit()
+    response = await client.patch("/player/move-player/", json={"map_id": 11, "map_object_id": 2})
+    assert response.status_code == 404
+    response_json = response.json()
+    assert response_json["detail"] == "Player not found"

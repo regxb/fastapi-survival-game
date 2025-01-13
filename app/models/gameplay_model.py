@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base_model import Base
@@ -11,8 +11,8 @@ class FarmSession(Base):
     __tablename__ = 'farm_sessions'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    start_time: Mapped[str] = mapped_column(default=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    end_time: Mapped[str] = mapped_column(nullable=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime)
+    end_time: Mapped[datetime] = mapped_column(DateTime)
     status: Mapped[str] = mapped_column(default="in_progress")
     map_id: Mapped[int] = mapped_column(ForeignKey('maps.id'))
     resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))

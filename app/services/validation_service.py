@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.gameplay_model import BuildingCost, FarmMode
-from app.models.player_model import Player, PlayerResources
+from app.models.player_model import Player, PlayerResources, PlayerBaseStorage
 from app.services.map_service import MapService
 
 
@@ -43,3 +43,16 @@ class ValidationService:
         player_energy -= farm_mode.total_energy
         if player_energy < 0:
             raise HTTPException(status_code=400, detail="Not enough energy to start farming")
+
+    @staticmethod
+    def can_player_transfer_items(player: Player, base_storage: PlayerBaseStorage, resource_id: int, count: int, direction: str):
+        if not player.base:
+            raise HTTPException(status_code=404, detail="Player has no base")
+        if player.map_object_id != player.base.map_object_id:
+            raise HTTPException(status_code=404, detail="The player is not at the base")
+
+        for resource in player.resources:
+            if direction == "to_storage" and resource.resource_id == resource_id and resource.count < count:
+                raise HTTPException(status_code=400, detail="Not enough resources")
+            elif direction == "from_storage" and resource.resource_id == resource_id and base_storage.count < count:
+                raise HTTPException(status_code=400, detail="Not enough resources")

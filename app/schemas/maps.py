@@ -14,6 +14,12 @@ class ObjectType(Enum):
     BASE = "base"
 
 
+class Resources(Enum):
+    WOOD = "wood"
+    STONE = "stone"
+    IRON = "iron"
+
+
 class MapCreateSchema(BaseModel):
     height: int = Field(gt=0)
     width: int = Field(gt=0)

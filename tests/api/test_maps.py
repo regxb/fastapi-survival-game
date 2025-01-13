@@ -14,9 +14,9 @@ async def test_get_maps(client, db_session):
 @pytest.mark.asyncio
 async def test_get_map(client, db_session):
     response = await client.get(
-        "/map/2/"
+        "/map/1/"
     )
     assert response.status_code == 200
     response_json = response.json()
-    assert response_json["id"] == 2
+    assert response_json["id"] == 1
     assert len(response_json["map_objects"]) == 3

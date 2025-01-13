@@ -53,10 +53,10 @@ class BaseRepository(Generic[ModelType]):
         stmt = select(self._model).filter(*args).filter_by(**kwargs)
         if options:
             stmt = stmt.options(*options)
-        result = await session.scalar(stmt)
+        result = await session.execute(stmt)
         # if result is None:
         #     raise HTTPException(status_code=404, detail=f"{self._model.__name__} Not found")
-        return result
+        return result.unique().scalar_one_or_none()
 
     async def get_by_id(self, session: AsyncSession, id: int) -> ModelType:
         db_obj = await session.get(self._model, id)
@@ -83,8 +83,8 @@ class BaseRepository(Generic[ModelType]):
             try:
                 session.add(db_obj)
                 await session.commit()
-            except IntegrityError:
+            except IntegrityError as e:
                 await session.rollback()
-                raise HTTPException(status_code=404)
+                raise HTTPException(status_code=500, detail=str(e.orig))
         await session.refresh(db_obj)
         return db_obj

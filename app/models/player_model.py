@@ -59,3 +59,15 @@ class PlayerBase(Base):
 
     map_object: Mapped["MapObject"] = relationship("MapObject")
     player: Mapped["Player"] = relationship("Player", back_populates="base")
+    resources: Mapped[list["PlayerBaseStorage"]] = relationship("PlayerBaseStorage", uselist=True)
+
+
+class PlayerBaseStorage(Base):
+    __tablename__ = 'players_bases_storage'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    count: Mapped[int] = mapped_column(default=0)
+    player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
+    resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))
+
+    resource: Mapped["Resource"] = relationship("Resource")

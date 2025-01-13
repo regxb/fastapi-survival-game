@@ -1,10 +1,13 @@
 import pytest
+from faststream import TestApp
+from faststream.redis import RedisBroker
 from httpx import ASGITransport, AsyncClient
 from pytest_asyncio import is_async_test
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from starlette.testclient import TestClient
 
 from app.core.database import TEST_DATABASE_URL, get_async_session
+from app.faststream.main import app as faststream_app
 from app.main import app
 from app.models import (BuildingCost, FarmMode, Map, MapObject,
                         MapObjectPosition, Resource, ResourcesZone)
@@ -52,31 +55,38 @@ async def client(db_session) -> TestClient:
         yield ac
 
 
+@pytest.fixture
+async def test_broker():
+    broker = RedisBroker()
+    async with TestApp(app=faststream_app):
+        yield broker
+
+
 async def populate_bd(db_session):
     async with db_session as session:
         # add map
-        map_ = Map(height=111, width=222)
-        session.add(map_)
-        map_ = Map(height=333, width=333)
-        session.add(map_)
+        map1 = Map(height=111, width=222)
+        session.add(map1)
+        map2 = Map(height=333, width=333)
+        session.add(map2)
         await session.flush()
 
         # add map object(city) and position
-        map_object = MapObject(name="city", type="city", map_id=map_.id, is_farmable=False)
+        map_object = MapObject(name="city", type="city", map_id=map1.id, is_farmable=False)
         session.add(map_object)
         await session.flush()
         map_object_position = MapObjectPosition(x1=11, y1=11, x2=15, y2=15, map_object_id=map_object.id)
         session.add(map_object_position)
 
         # add map object(quarry) and position
-        quarry_map_object = MapObject(name="quarry", type="stone", map_id=map_.id, is_farmable=True)
+        quarry_map_object = MapObject(name="quarry", type="stone", map_id=map1.id, is_farmable=True)
         session.add(quarry_map_object)
         await session.flush()
         quarry_map_object_position = MapObjectPosition(x1=22, y1=22, x2=25, y2=25, map_object_id=quarry_map_object.id)
         session.add(quarry_map_object_position)
 
         # add map object(sawmill) and position
-        sawmill_map_object = MapObject(name="sawmill", type="wood", map_id=map_.id, is_farmable=True)
+        sawmill_map_object = MapObject(name="sawmill", type="wood", map_id=map1.id, is_farmable=True)
         session.add(sawmill_map_object)
         await session.flush()
         sawmill_map_object_position = MapObjectPosition(x1=32, y1=32, x2=35, y2=35, map_object_id=sawmill_map_object.id)
@@ -90,9 +100,9 @@ async def populate_bd(db_session):
         await session.flush()
 
         # add resources zone
-        wood_resource_zone = ResourcesZone(map_object_id=sawmill_map_object.id, resource_id=wood.id, map_id=map_.id)
+        wood_resource_zone = ResourcesZone(map_object_id=sawmill_map_object.id, resource_id=wood.id, map_id=map1.id)
         session.add(wood_resource_zone)
-        stone_resource_zone = ResourcesZone(map_object_id=quarry_map_object.id, resource_id=stone.id, map_id=map_.id)
+        stone_resource_zone = ResourcesZone(map_object_id=quarry_map_object.id, resource_id=stone.id, map_id=map1.id)
         session.add(stone_resource_zone)
         await session.flush()
 

@@ -1,14 +1,13 @@
 import pytest
 
-from app.models import Player, PlayerResources
+from app.models import Player
 from app.schemas.gameplay import BuildingType
+from tests.utils import create_players_with_resources, create_player
 
 
 @pytest.mark.asyncio
-async def test_get_cost_building_cost(client, db_session):
-    player = Player(map_id=1, player_id=1, name="test_name")
-    db_session.add(player)
-    await db_session.commit()
+async def test_get_building_cost(client, db_session):
+    await create_player(db_session)
 
     response = await client.get(
         "/gameplay/cost-of-building-base/",
@@ -27,14 +26,7 @@ async def test_get_cost_building_cost(client, db_session):
 
 @pytest.mark.asyncio
 async def test_build_base(client, db_session):
-    player = Player(map_id=1, player_id=1, name="test_name")
-    db_session.add(player)
-    await db_session.flush()
-    player_resources = PlayerResources(player_id=player.id, resource_id=1, count=10)
-    db_session.add(player_resources)
-    player_resources = PlayerResources(player_id=player.id, resource_id=2, count=20)
-    db_session.add(player_resources)
-    await db_session.commit()
+    await create_players_with_resources(db_session)
 
     response = await client.post(
         "/gameplay/build-base/",
@@ -51,11 +43,10 @@ async def test_build_base(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_build_base(client, db_session):
+async def test_build_base(client, db_session, test_broker):
     player = Player(map_id=1, player_id=1, name="test_name", map_object_id=2)
     db_session.add(player)
     await db_session.flush()
-
     await db_session.commit()
 
     response = await client.patch(
@@ -67,5 +58,35 @@ async def test_build_base(client, db_session):
     )
 
     assert response.status_code == 200
+    await db_session.refresh(player)
+    assert player.status == "farming"
+
+@pytest.mark.asyncio
+async def test_get_non_exist_building_cost(client, db_session):
+    await create_player(db_session)
+
+    response = await client.get(
+        "/gameplay/cost-of-building-base/",
+        params={
+            "building_type": "test mode"
+        }
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_build_base_in_busy_area(client, db_session):
+    await create_players_with_resources(db_session)
+
+    response = await client.post(
+        "/gameplay/build-base/",
+        json={
+            "x1": 11,
+            "y1": 11,
+            "map_id": 1,
+        }
+    )
+
+    assert response.status_code == 409
     response_json = response.json()
-    # assert response_json["name"] == "test_name base"
+    assert response_json["detail"] == "The place is already taken"

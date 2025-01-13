@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.faststream.main import broker
-from app.models import MapObject, Player, ResourcesZone
+from app.models import MapObject, Player, ResourcesZone, FarmSession
 from app.repository import (repository_farm_mode, repository_farm_session,
                             repository_player)
-from app.schemas.gameplay import (FarmModeSchema, FarmResourcesSchema,
+from app.schemas.gameplay import (FarmResourcesSchema,
                                   FarmSessionCreateSchema, FarmSessionSchema)
 from app.services.base_service import BaseService
 from app.services.validation_service import ValidationService
@@ -52,8 +52,8 @@ class FarmingService:
                 map_id=farm_data.map_id,
                 resource_id=player.map_object.resource_zone.resource.id,
                 player_id=player.id,
-                start_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                end_time=(datetime.now() + timedelta(minutes=current_mode.total_minutes)).strftime("%Y-%m-%d %H:%M:%S")
+                start_time=datetime.now(),
+                end_time=datetime.now() + timedelta(minutes=current_mode.total_minutes)
             )
         )
 
@@ -61,28 +61,7 @@ class FarmingService:
 
         await BaseService.commit_or_rollback(self.session)
 
-        return FarmSessionSchema.model_validate(farm_session)
-
-    async def get_farm_mode(self, map_id: int, telegram_id: int) -> FarmModeSchema:
-        player = await repository_player.get(
-            self.session,
-            options=[
-                joinedload(Player.map_object).
-                joinedload(MapObject.resource_zone).
-                joinedload(ResourcesZone.farm_modes)
-            ],
-            map_id=map_id,
-            player_id=telegram_id)
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        ValidationService.is_farmable_area(player.map_object)
-        if not player.map_object.resource_zone:
-            raise HTTPException(status_code=404, detail="Resource area not found")
-
-        return FarmModeSchema(
-            player_resource_multiplier=player.resource_multiplier,
-            player_energy_multiplier=player.energy_multiplier,
-            **player.map_object.resource_zone.__dict__)
+        return FarmSessionSchema(time_left=self.get_time_left(farm_session.end_time), **farm_session.__dict__)
 
     async def _publish_farm_task(self, farm_session, current_farm_mode) -> None:
         task_data = {
@@ -93,3 +72,20 @@ class FarmingService:
             "total_resources": current_farm_mode.total_resources,
         }
         await broker.publish(json.dumps(task_data), "farm_session_task")
+
+    @staticmethod
+    def get_time_left(time_end: datetime):
+        time_diff = time_end - datetime.now()
+        total_seconds = time_diff.total_seconds()
+
+        hours = int(total_seconds // 3600)
+        minutes = int((total_seconds % 3600) // 60)
+        seconds = int(total_seconds % 60)
+        milliseconds = int((total_seconds % 1) * 1000)
+
+        return {
+            "hours": hours,
+            "minutes": minutes,
+            "seconds": seconds,
+            "milliseconds": milliseconds
+        }

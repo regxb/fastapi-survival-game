@@ -17,7 +17,6 @@ router = RedisRouter()
 async def farm_session_task(message: str):
     data = json.loads(message)
     await asyncio.sleep(10)
-    # await asyncio.sleep(data["total_time"] * 60)
     async with async_session_maker() as session:
         farm_session = await repository_farm_session.get_by_id(session, data["farm_session_id"])
         if not farm_session or farm_session.status != "in_progress":
