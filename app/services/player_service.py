@@ -46,7 +46,7 @@ class PlayerService:
 
         farm_session = await repository_farm_session.get(
             self.session,
-            player_id=telegram_id,
+            player_id=player.id,
             map_id=map_id,
             status="in_progress"
         )
@@ -65,6 +65,19 @@ class PlayerService:
             self.session, player_data, player_id=telegram_id, map_id=player_data.map_id
         )
         return PlayerMoveResponseSchema(new_map_object_id=new_player_position.map_object_id, player_id=player.id)
+
+    async def update_energy(self):
+        where_clause = {"energy": ("<", 100)}
+
+        update_data = {"energy": Player.energy + 1}
+
+        updated_count = await repository_player.update_multiple(
+            session=self.session,
+            model=Player,
+            obj_in=update_data,
+            where_clause=where_clause,
+        )
+        print(f"Updated {updated_count} rows")
 
     @staticmethod
     def update_player_resources(
@@ -88,14 +101,18 @@ class PlayerResponseService:
 
         else:
             farm_session_schema = None
+
         in_base = player.map_object_id == player.base.map_object_id if player.base else False
         resources = {resource.resource.name: resource.count for resource in player.resources}
+
         if player.base:
             base_storage_resources = {resource.resource.name: resource.count for resource in player.base.resources}
             base = PlayerBaseSchema(map_object_id=player.base.map_object_id, resources=base_storage_resources)
         else:
             base = None
+
         player_data = {key: value for key, value in player.__dict__.items() if key != "base" and key != "resources"}
+
         player_schema = PlayerSchema(
             in_base=in_base,
             base=base,
@@ -105,16 +122,3 @@ class PlayerResponseService:
         )
 
         return player_schema
-
-    async def update_energy(self):
-        where_clause = {"energy": ("<", 100)}
-
-        update_data = {"energy": Player.energy + 1}
-
-        updated_count = await repository_player.update_multiple(
-            session=self.session,
-            model=Player,
-            obj_in=update_data,
-            where_clause=where_clause,
-        )
-        print(f"Updated {updated_count} rows")

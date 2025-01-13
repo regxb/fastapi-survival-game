@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from starlette.testclient import TestClient
 
 from app.core.database import TEST_DATABASE_URL, get_async_session
-from app.faststream.main import app as faststream_app
+from app.broker.main import app as faststream_app
 from app.main import app
 from app.models import (BuildingCost, FarmMode, Map, MapObject,
                         MapObjectPosition, Resource, ResourcesZone)
