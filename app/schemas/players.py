@@ -39,7 +39,7 @@ class PlayerResourcesSchema(BaseModel):
 
 class PlayerResponseSchema(PlayerSchema):
     resources: Optional[dict]
-
+    id: Optional[id] = None
     model_config = ConfigDict(from_attributes=True)
 
 

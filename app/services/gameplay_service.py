@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.faststream.main import broker
+from app.broker.main import broker
 from app.models import MapObject, Player, ResourcesZone
 from app.repository import (repository_farm_mode, repository_farm_session,
                             repository_player)
