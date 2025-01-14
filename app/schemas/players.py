@@ -56,7 +56,8 @@ class PlayerSchema(BasePlayerSchema):
 
 
 class PlayerResourcesSchema(BaseModel):
-    resource: dict
+    player_resources: dict
+    storage_resources: dict
 
     model_config = ConfigDict(from_attributes=True)
 

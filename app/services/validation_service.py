@@ -1,20 +1,24 @@
+from typing import TypeVar, Type
+
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.gameplay_model import BuildingCost, FarmMode
+from app.models.gameplay_model import FarmMode
 from app.models.player_model import Player, PlayerResources, PlayerBaseStorage
 from app.services.map_service import MapService
+
+ModelType = TypeVar("ModelType")
 
 
 class ValidationService:
 
     @staticmethod
-    def can_player_build(building_costs: list[BuildingCost], player_resources: list[PlayerResources]):
+    def does_user_have_enough_resources(costs: list[Type[ModelType]], player_resources: list[PlayerResources]):
         if not player_resources:
             return False
-        player_resource_dict = {res.resource_id: res.count for res in player_resources}
-        for cost in building_costs:
-            if player_resource_dict.get(cost.resource_id, 0) < cost.quantity:
+        player_resource_dict = {res.resource_id: res.resource_quantity for res in player_resources}
+        for cost in costs:
+            if player_resource_dict.get(cost.resource_id, 0) < cost.resource_quantity:
                 return False
         return True
 
@@ -31,7 +35,7 @@ class ValidationService:
     ):
         if not await MapService(session).area_is_free(map_id, x1, y1, x2, y2):
             raise HTTPException(status_code=409, detail="The place is already taken")
-        ValidationService.can_player_build(building_costs, player_resources)
+        ValidationService.does_user_have_enough_resources(building_costs, player_resources)
 
     @staticmethod
     def is_farmable_area(map_object) -> None:
@@ -45,14 +49,24 @@ class ValidationService:
             raise HTTPException(status_code=400, detail="Not enough energy to start farming")
 
     @staticmethod
-    def can_player_transfer_items(player: Player, base_storage: PlayerBaseStorage, resource_id: int, count: int, direction: str):
+    def can_player_transfer_items(player: Player, base_storage: PlayerBaseStorage, resource_id: int, count: int,
+                                  direction: str):
         if not player.base:
             raise HTTPException(status_code=404, detail="Player has no base")
         if player.map_object_id != player.base.map_object_id:
             raise HTTPException(status_code=404, detail="The player is not at the base")
+        if direction == "to_storage" and not player.resources:
+            raise HTTPException(status_code=400, detail="Not enough resources")
+        if direction == "from_storage" and not player.base.storage:
+            raise HTTPException(status_code=400, detail="Not enough resources")
+
 
         for resource in player.resources:
-            if direction == "to_storage" and resource.resource_id == resource_id and resource.count < count:
+            if direction == "to_storage" and resource.resource_id == resource_id and resource.resource_quantity < count:
                 raise HTTPException(status_code=400, detail="Not enough resources")
-            elif direction == "from_storage" and resource.resource_id == resource_id and base_storage.count < count:
+            elif direction == "from_storage" and resource.resource_id == resource_id and base_storage.resource_quantity < count:
                 raise HTTPException(status_code=400, detail="Not enough resources")
+
+    @staticmethod
+    def can_player_craft_item(player: Player):
+        ...

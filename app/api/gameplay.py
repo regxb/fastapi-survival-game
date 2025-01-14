@@ -9,26 +9,27 @@ from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
 from app.models import Player
 from app.repository import repository_player, repository_farm_session
-from app.schemas.gameplay import BuildingType, FarmResourcesSchema
+from app.schemas.gameplay import BuildingType, FarmResourcesSchema, CraftItemSchema
 from app.schemas.players import PlayerBaseCreateSchema, PlayerTransferItemSchema
-from app.services.gameplay_service import FarmingService
+from app.services.gameplay_service import FarmingService, ItemService
 from app.services.player_base_service import PlayerBaseService
 
 router = APIRouter(prefix="/gameplay", tags=["gameplay"])
 
 
-@router.get("/123/")
-async def qwe(session: AsyncSession = Depends(get_async_session)):
+@router.get("/test/")
+async def test(session: AsyncSession = Depends(get_async_session)):
     player = await repository_farm_session.get(session, id=13)
     print(player.end_time - datetime.datetime.now())
 
 @router.get("/cost-of-building-base/")
 async def get_cost_building_base(
+        map_id: int,
         building_type: BuildingType,
         user: WebAppUser = Depends(get_user_data_from_request),
         session: AsyncSession = Depends(get_async_session)
 ):
-    return await PlayerBaseService(session).get_cost_building_base(building_type.value, user.id)
+    return await PlayerBaseService(session).get_cost_building_base(building_type.value, user.id, map_id)
 
 
 @router.post("/build-base/")
@@ -57,3 +58,19 @@ async def transfer_resources(
         session: AsyncSession = Depends(get_async_session),
 ):
     return await PlayerBaseService(session).move_resource_to_storage(user.id, transfer_data)
+
+
+@router.patch("/get-items-recipe/")
+async def get_items_recipe(
+        user: WebAppUser = Depends(get_user_data_from_request),
+        session: AsyncSession = Depends(get_async_session)
+):
+    return await ItemService(session).get_items()
+
+@router.patch("/craft-item/")
+async def craft_item(
+        craft_data: CraftItemSchema,
+        user: WebAppUser = Depends(get_user_data_from_request),
+        session: AsyncSession = Depends(get_async_session)
+):
+    return await ItemService(session).craft_item(user.id, craft_data)

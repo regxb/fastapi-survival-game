@@ -138,9 +138,9 @@ async def populate_bd(db_session):
         session.add(stone_hard_farm_mode)
 
         # add building costs
-        building_cost = BuildingCost(type="base", resource_id=wood.id, quantity=10)
+        building_cost = BuildingCost(type="base", resource_id=wood.id, resource_quantity=10)
         session.add(building_cost)
-        building_cost = BuildingCost(type="base", resource_id=stone.id, quantity=20)
+        building_cost = BuildingCost(type="base", resource_id=stone.id, resource_quantity=20)
         session.add(building_cost)
 
         await session.commit()

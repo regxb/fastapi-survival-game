@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict
@@ -81,3 +81,8 @@ class BuildingCostSchema(BaseModel):
 
 class BuildingCostResponseSchema(BaseModel):
     resources: list[BuildingCostSchema]
+
+
+class CraftItemSchema(BaseModel):
+    map_id: int
+    item_id: int

@@ -34,7 +34,7 @@ class BuildingCost(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[str]
     resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))
-    quantity: Mapped[int]
+    resource_quantity: Mapped[int]
 
     resource: Mapped["Resource"] = relationship("Resource")
 
@@ -48,3 +48,24 @@ class FarmMode(Base):
     total_energy: Mapped[int]
     total_resources: Mapped[int]
     resource_zone_id: Mapped[int] = mapped_column(ForeignKey("resources_zones.id"))
+
+
+class Item(Base):
+    __tablename__ = 'items'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    tier: Mapped[int]
+
+    recipe: Mapped[list["ItemRecipe"]] = relationship("ItemRecipe", uselist=True)
+
+
+class ItemRecipe(Base):
+    __tablename__ = 'recipe_items'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    resource_quantity: Mapped[int]
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"))
+    resource_id: Mapped[int] = mapped_column(ForeignKey("resources.id"))
+
+    resource: Mapped["Resource"] = relationship("Resource")

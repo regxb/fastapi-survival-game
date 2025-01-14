@@ -37,7 +37,7 @@ async def farm_session_task(message: str):
             session.add(player_resource)
             await session.flush()
 
-        player_resource.count += data["total_resources"]
+        player_resource.resource_quantity += data["total_resources"]
 
         try:
             await session.commit()

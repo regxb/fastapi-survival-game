@@ -2,7 +2,7 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base_model import Base
-from app.models.gameplay_model import FarmSession, Resource
+from app.models.gameplay_model import FarmSession, Resource, Item
 
 
 class Player(Base):
@@ -23,6 +23,7 @@ class Player(Base):
     resources: Mapped[list["PlayerResources"]] = relationship("PlayerResources", uselist=True)
     farm_sessions: Mapped[list["FarmSession"]] = relationship("FarmSession", uselist=True)
     base: Mapped["PlayerBase"] = relationship("PlayerBase", back_populates="player")
+    inventory: Mapped[list["Inventory"]] = relationship("Inventory", uselist=True)
 
     __table_args__ = (UniqueConstraint('player_id', 'map_id', name='idx_uniq_player_id'),)
 
@@ -31,7 +32,7 @@ class PlayerResources(Base):
     __tablename__ = 'players_resources'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    count: Mapped[int] = mapped_column(default=0)
+    resource_quantity: Mapped[int] = mapped_column(default=0)
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
     resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))
 
@@ -43,9 +44,11 @@ class Inventory(Base):
     __tablename__ = 'inventories'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    slots: Mapped[int] = mapped_column(default=5)
+    slots: Mapped[int] = mapped_column(default=5) # убрать в игрока
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
-    resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'), nullable=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
+
+    item: Mapped["Item"] = relationship("Item")
 
 
 class PlayerBase(Base):
@@ -59,14 +62,14 @@ class PlayerBase(Base):
 
     map_object: Mapped["MapObject"] = relationship("MapObject")
     player: Mapped["Player"] = relationship("Player", back_populates="base")
-    resources: Mapped[list["PlayerBaseStorage"]] = relationship("PlayerBaseStorage", uselist=True)
+    storage: Mapped[list["PlayerBaseStorage"]] = relationship("PlayerBaseStorage", uselist=True)
 
 
 class PlayerBaseStorage(Base):
     __tablename__ = 'players_bases_storage'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    count: Mapped[int] = mapped_column(default=0)
+    resource_quantity: Mapped[int] = mapped_column(default=0)
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))
 

@@ -2,7 +2,7 @@ from typing import Generic, Optional, Sequence, Type, TypeVar, Dict, Any
 
 from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select,update, and_
+from sqlalchemy import select, update, and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -131,7 +131,7 @@ class BaseRepository(Generic[ModelType]):
             result = await session.execute(stmt)
             await session.commit()
 
-            return result.rowcount
+            return result.rowcount()
 
         except IntegrityError:
             await session.rollback()

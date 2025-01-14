@@ -3,13 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models import Player, PlayerResources, PlayerBase, BuildingCost, MapObject
+from app.models.player_model import PlayerBaseStorage
 from app.repository import repository_player, repository_building_cost
 from app.repository.map_repository import repository_resource
 from app.repository.player_repository import repository_player_base_storage, repository_player_base, \
     repository_player_resource
 from app.schemas.gameplay import BuildingCostSchema
 from app.schemas.players import PlayerTransferItemSchema, PlayerBaseStorageCreate, PlayerBaseCreateDBSchema, \
-    PlayerBaseCreateSchema
+    PlayerBaseCreateSchema, PlayerResourcesSchema
 from app.services import MapService
 from app.services.base_service import BaseService
 from app.services.player_service import PlayerResponseService, PlayerService
@@ -25,7 +26,7 @@ class PlayerBaseService:
             self.session,
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.base).joinedload(PlayerBase.resources)
+                joinedload(Player.base).joinedload(PlayerBase.storage)
             ],
             player_id=telegram_id,
             map_id=transfer_data.map_id
@@ -39,6 +40,7 @@ class PlayerBaseService:
 
         base_storage = await repository_player_base_storage.get(
             self.session,
+            options=[joinedload(PlayerBaseStorage.resource)],
             player_base_id=player.base.id,
             resource_id=resource.id,
         )
@@ -58,21 +60,21 @@ class PlayerBaseService:
             )
 
         if transfer_data.direction.value == "to_storage":
-            base_storage.count += transfer_data.count
+            base_storage.resource_quantity += transfer_data.count
             PlayerService(self.session).update_player_resources(
                 player.resources, resource.id, transfer_data.count, "decrease"
             )
         elif transfer_data.direction.value == "from_storage":
-            base_storage.count -= transfer_data.count
+            base_storage.resource_quantity -= transfer_data.count
             PlayerService(self.session).update_player_resources(
                 player.resources, resource.id, transfer_data.count, "increase"
             )
-
         await BaseService.commit_or_rollback(self.session)
-        await self.session.refresh(player)
-        await self.session.refresh(base_storage)
 
-        return PlayerResponseService.get_player_response(player)
+        player_resources = {resource.resource.name: resource.resource_quantity for resource in player.resources}
+        storage_resources = {resource.resource.name: resource.resource_quantity for resource in player.base.storage}
+
+        return PlayerResourcesSchema(player_resources=player_resources, storage_resources=storage_resources)
 
     async def create_player_base(
             self,
@@ -88,7 +90,7 @@ class PlayerBaseService:
 
         building_costs = await repository_building_cost.get_multi(self.session, type="base")
         player_resources = await repository_player_resource.get_multi(self.session, player_id=player.id)
-        if not ValidationService.can_player_build(building_costs, player_resources):
+        if not ValidationService.does_user_have_enough_resources(building_costs, player_resources):
             raise HTTPException(status_code=400, detail="Not enough resources")
 
         x1, y1 = object_data.x1, object_data.y1
@@ -111,12 +113,14 @@ class PlayerBaseService:
         )
 
         for cost in building_costs:
-            PlayerService.update_player_resources(player_resources, cost.resource_id, cost.quantity, "decrease")
+            PlayerService.update_player_resources(
+                player_resources, cost.resource_id, cost.resource_quantity, "decrease"
+            )
 
         await BaseService.commit_or_rollback(self.session)
         return new_map_object
 
-    async def get_cost_building_base(self, building_type: str, telegram_id: int) -> BuildingCostSchema:
+    async def get_cost_building_base(self, building_type: str, telegram_id: int, map_id: int) -> BuildingCostSchema:
         costs = await repository_building_cost.get_multi(
             self.session,
             options=[joinedload(BuildingCost.resource)],
@@ -127,9 +131,11 @@ class PlayerBaseService:
         player = await repository_player.get(
             self.session,
             options=[joinedload(Player.resources)],
-            player_id=telegram_id)
+            player_id=telegram_id,
+            map_id=map_id
+        )
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
-        can_build = ValidationService.can_player_build(costs, player.resources)
-        resources = {cost.resource.name: cost.quantity for cost in costs}
+        can_build = ValidationService.does_user_have_enough_resources(costs, player.resources)
+        resources = {cost.resource.name: cost.resource_quantity for cost in costs}
         return BuildingCostSchema(can_build=can_build, resources=resources)

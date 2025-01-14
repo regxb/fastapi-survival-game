@@ -10,7 +10,7 @@ from app.repository.player_repository import repository_player
 from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema
 from app.schemas.players import (BasePlayerSchema, PlayerCreateSchema,
                                  PlayerDBCreateSchema, PlayerSchema, PlayerBaseSchema)
-from app.services import FarmingService
+from app.services.base_service import BaseService
 from app.services.validation_service import ValidationService
 
 
@@ -36,7 +36,7 @@ class PlayerService:
             self.session,
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.base).joinedload(PlayerBase.resources)
+                joinedload(Player.base).joinedload(PlayerBase.storage)
             ],
             map_id=map_id,
             player_id=telegram_id
@@ -81,14 +81,14 @@ class PlayerService:
 
     @staticmethod
     def update_player_resources(
-            player_resources: list[PlayerResources], resource_id: int, cost: int, action: str
+            player_resources: list[PlayerResources], resource_id: int, quantity: int, action: str
     ) -> None:
         for resource in player_resources:
             if resource.resource_id == resource_id:
                 if action == "decrease":
-                    resource.count -= cost
+                    resource.resource_quantity -= quantity
                 if action == "increase":
-                    resource.count += cost
+                    resource.resource_quantity += quantity
 
 
 class PlayerResponseService:
@@ -96,18 +96,24 @@ class PlayerResponseService:
     @staticmethod
     def get_player_response(player: Player, farm_session: FarmSession, session: AsyncSession):
         if farm_session:
-            time_left = FarmingService(session).get_time_left(farm_session.end_time)
+            time_left = BaseService().get_time_left(farm_session.end_time)
             farm_session_schema = FarmSessionSchema(time_left=time_left, **farm_session.__dict__)
 
         else:
             farm_session_schema = None
 
         in_base = player.map_object_id == player.base.map_object_id if player.base else False
-        resources = {resource.resource.name: resource.count for resource in player.resources}
+        resources = {
+            resource.resource.name: resource.resource_quantity for resource in player.resources if
+            resource.resource_quantity > 0
+        }
+        resources = None if not resources else resources
 
         if player.base:
-            base_storage_resources = {resource.resource.name: resource.count for resource in player.base.resources}
-            base = PlayerBaseSchema(map_object_id=player.base.map_object_id, resources=base_storage_resources)
+            storage_resources = {resource.resource.name: resource.resource_quantity for resource in player.base.storage
+                                 if resource.resource_quantity > 0}
+            storage_resources = None if not storage_resources else storage_resources
+            base = PlayerBaseSchema(map_object_id=player.base.map_object_id, resources=storage_resources)
         else:
             base = None
 

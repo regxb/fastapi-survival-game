@@ -6,12 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.broker.main import broker
-from app.models import MapObject, Player, ResourcesZone
+from app.models import MapObject, Player, ResourcesZone, Inventory
+from app.models.gameplay_model import Item, ItemRecipe
 from app.repository import (repository_farm_mode, repository_farm_session,
                             repository_player)
+from app.repository.gameplay_repository import repository_item
 from app.schemas.gameplay import (FarmResourcesSchema,
-                                  FarmSessionCreateSchema, FarmSessionSchema)
+                                  FarmSessionCreateSchema, FarmSessionSchema, CraftItemSchema)
 from app.services.base_service import BaseService
+from app.services.player_service import PlayerService
 from app.services.validation_service import ValidationService
 
 
@@ -61,7 +64,8 @@ class FarmingService:
 
         await BaseService.commit_or_rollback(self.session)
 
-        return FarmSessionSchema(time_left=self.get_time_left(farm_session.end_time), **farm_session.__dict__)
+        time_left = BaseService.get_time_left(farm_session.end_time)
+        return FarmSessionSchema(time_left=time_left, **farm_session.__dict__)
 
     async def _publish_farm_task(self, farm_session, current_farm_mode) -> None:
         task_data = {
@@ -73,19 +77,66 @@ class FarmingService:
         }
         await broker.publish(json.dumps(task_data), "farm_session_task")
 
-    @staticmethod
-    def get_time_left(time_end: datetime):
-        time_diff = time_end - datetime.now()
-        total_seconds = time_diff.total_seconds()
 
-        hours = int(total_seconds // 3600)
-        minutes = int((total_seconds % 3600) // 60)
-        seconds = int(total_seconds % 60)
-        milliseconds = int((total_seconds % 1) * 1000)
+class ItemService:
+    def __init__(self, session: AsyncSession):
+        self.session = session
 
-        return {
-            "hours": hours,
-            "minutes": minutes,
-            "seconds": seconds,
-            "milliseconds": milliseconds
-        }
+    async def get_items(self):
+        items = await repository_item.get_multi(
+            self.session,
+            options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
+        )
+        response = [
+            {
+                "tier": item.tier,
+                "id": item.id,
+                "name": item.name,
+                "can_craft": True,
+                "recipe": {
+                    "resources": {
+                        recipe.resource.name: recipe.resource_quantity
+                        for recipe in item.recipe
+                    }
+                },
+            }
+            for item in items
+        ]
+        return response
+
+    async def craft_item(self, telegram_id: int, craft_data: CraftItemSchema):
+        player = await repository_player.get(
+            self.session,
+            options=[
+                joinedload(Player.resources),
+                joinedload(Player.inventory).joinedload(Inventory.item)
+            ],
+            player_id=telegram_id,
+            map_id=craft_data.map_id
+        )
+
+        item = await repository_item.get(
+            self.session,
+            options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
+            id=craft_data.item_id
+        )
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+
+        if not item:
+            raise HTTPException(status_code=404, detail="Item not found")
+
+        if not ValidationService.does_user_have_enough_resources(item.recipe, player.resources):
+            raise HTTPException(status_code=400, detail="Not enough items")
+
+        for recipe in item.recipe:
+            PlayerService.update_player_resources(player.resources, recipe.resource_id, recipe.resource_quantity,
+                                                  "decrease")
+        player_inventory = Inventory(player_id=player.player_id, item_id=item.id)
+        self.session.add(player_inventory)
+        await BaseService.commit_or_rollback(self.session)
+
+
+        response = [item.item.name for item in player.inventory]
+
+        return {"player_items": response}

@@ -1,4 +1,5 @@
-from app.models.player_model import Player, PlayerBase, PlayerResources, PlayerBaseStorage
+from app.models import Inventory, Player, PlayerBase, PlayerResources
+from app.models.player_model import PlayerBaseStorage
 from app.repository.base_repository import BaseRepository
 
 RepositoryPlayer = BaseRepository[Player]
@@ -8,7 +9,10 @@ RepositoryPlayerBase = BaseRepository[PlayerBase]
 repository_player_base = RepositoryPlayerBase(PlayerBase)
 
 RepositoryPlayerResources = BaseRepository[PlayerResources]
-repository_player_resource = RepositoryPlayerBase(PlayerResources)
+repository_player_resource = RepositoryPlayerResources(PlayerResources)
 
-RepositoryPlayerBaseStorage = BaseRepository(PlayerBaseStorage)
-repository_player_base_storage = RepositoryPlayerBase(PlayerBaseStorage)
+RepositoryPlayerBaseStorage = BaseRepository[PlayerBaseStorage]
+repository_player_base_storage = RepositoryPlayerBaseStorage(PlayerBaseStorage)
+
+RepositoryInventory = BaseRepository[Inventory]
+repository_inventory = RepositoryInventory(Inventory)
