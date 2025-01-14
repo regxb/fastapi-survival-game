@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from faststream.redis import RedisRouter
 from sqlalchemy.exc import IntegrityError
 
+from app.core import config
 from app.core.database import async_session_maker
 from app.models import PlayerResources
 from app.repository import (repository_farm_session, repository_player,
@@ -16,7 +17,10 @@ router = RedisRouter()
 @router.subscriber("farm_session_task")
 async def farm_session_task(message: str):
     data = json.loads(message)
-    await asyncio.sleep(10)
+    if config.DEV:
+        await asyncio.sleep(10)
+    else:
+        await asyncio.sleep(data["total_minutes"] * 60)
     async with async_session_maker() as session:
         farm_session = await repository_farm_session.get_by_id(session, data["farm_session_id"])
         if not farm_session or farm_session.status != "in_progress":

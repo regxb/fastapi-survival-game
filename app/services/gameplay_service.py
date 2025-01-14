@@ -82,7 +82,15 @@ class ItemService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_items(self):
+    async def get_items(self, map_id: int, telegram_id: int):
+        player = await repository_player.get(
+            self.session,
+            options=[joinedload(Player.base)],
+            player_id=telegram_id,
+            map_id=map_id
+        )
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
         items = await repository_item.get_multi(
             self.session,
             options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
@@ -92,7 +100,7 @@ class ItemService:
                 "tier": item.tier,
                 "id": item.id,
                 "name": item.name,
-                "can_craft": True,
+                "can_craft": player.base.defense_level >= item.tier if player.base else False,
                 "recipe": {
                     "resources": {
                         recipe.resource.name: recipe.resource_quantity
@@ -109,6 +117,7 @@ class ItemService:
             self.session,
             options=[
                 joinedload(Player.resources),
+                joinedload(Player.base),
                 joinedload(Player.inventory).joinedload(Inventory.item)
             ],
             player_id=telegram_id,
@@ -120,22 +129,18 @@ class ItemService:
             options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
             id=craft_data.item_id
         )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
 
-        if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
-
-        if not ValidationService.does_user_have_enough_resources(item.recipe, player.resources):
-            raise HTTPException(status_code=400, detail="Not enough items")
+        ValidationService.can_player_craft_item(player, item)
 
         for recipe in item.recipe:
-            PlayerService.update_player_resources(player.resources, recipe.resource_id, recipe.resource_quantity,
-                                                  "decrease")
-        player_inventory = Inventory(player_id=player.player_id, item_id=item.id)
+            PlayerService.update_player_resources(
+                player.resources, recipe.resource_id, recipe.resource_quantity, "decrease"
+            )
+
+        player_inventory = Inventory(player_id=player.id, item_id=item.id)
         self.session.add(player_inventory)
         await BaseService.commit_or_rollback(self.session)
-
+        await self.session.refresh(player)
 
         response = [item.item.name for item in player.inventory]
 

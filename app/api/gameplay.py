@@ -60,12 +60,13 @@ async def transfer_resources(
     return await PlayerBaseService(session).move_resource_to_storage(user.id, transfer_data)
 
 
-@router.patch("/get-items-recipe/")
+@router.get("/get-items-recipe/")
 async def get_items_recipe(
+        map_id: int,
         user: WebAppUser = Depends(get_user_data_from_request),
         session: AsyncSession = Depends(get_async_session)
 ):
-    return await ItemService(session).get_items()
+    return await ItemService(session).get_items(map_id, user.id)
 
 @router.patch("/craft-item/")
 async def craft_item(
