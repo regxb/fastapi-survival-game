@@ -1,5 +1,3 @@
-import datetime
-
 from aiogram.utils.web_app import WebAppUser
 from fastapi import APIRouter
 from fastapi.params import Depends
@@ -7,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
-from app.models import Player
-from app.repository import repository_player, repository_farm_session
-from app.schemas.gameplay import BuildingType, FarmResourcesSchema, CraftItemSchema
-from app.schemas.players import PlayerBaseCreateSchema, PlayerTransferItemSchema
+from app.repository import repository_farm_session
+from app.schemas.gameplay import BuildingType, FarmResourcesSchema, CraftItemSchema, BuildingCostSchema, \
+    FarmSessionSchema, ItemResponseSchema
+from app.schemas.players import PlayerBaseCreateSchema, PlayerTransferResourceSchema, PlayerResourcesSchema, \
+    PlayerInventoryResponseSchema, PlayerTransferItemSchema
 from app.services.gameplay_service import FarmingService, ItemService
 from app.services.player_base_service import PlayerBaseService
 
@@ -20,9 +19,9 @@ router = APIRouter(prefix="/gameplay", tags=["gameplay"])
 @router.get("/test/")
 async def test(session: AsyncSession = Depends(get_async_session)):
     player = await repository_farm_session.get(session, id=13)
-    print(player.end_time - datetime.datetime.now())
 
-@router.get("/cost-of-building-base/")
+
+@router.get("/cost-of-building-base/", response_model=BuildingCostSchema)
 async def get_cost_building_base(
         map_id: int,
         building_type: BuildingType,
@@ -41,7 +40,7 @@ async def build_base(
     return await PlayerBaseService(session).create_player_base(user.id, object_data)
 
 
-@router.patch("/farm-resources/")
+@router.patch("/farm-resources/", response_model=FarmSessionSchema)
 async def farm_resources(
         farm_data: FarmResourcesSchema,
         user: WebAppUser = Depends(get_user_data_from_request),
@@ -51,16 +50,25 @@ async def farm_resources(
     return await FarmingService(session).start_farming(farm_data, user.id)
 
 
-@router.patch("/transfer-resources/")
+@router.patch("/transfer-resources/", response_model=PlayerResourcesSchema)
 async def transfer_resources(
+        transfer_data: PlayerTransferResourceSchema,
+        user: WebAppUser = Depends(get_user_data_from_request),
+        session: AsyncSession = Depends(get_async_session),
+):
+    return await PlayerBaseService(session).transfer_resources(user.id, transfer_data)
+
+
+@router.patch("/transfer-items/", response_model=PlayerResourcesSchema)
+async def transfer_item(
         transfer_data: PlayerTransferItemSchema,
         user: WebAppUser = Depends(get_user_data_from_request),
         session: AsyncSession = Depends(get_async_session),
 ):
-    return await PlayerBaseService(session).move_resource_to_storage(user.id, transfer_data)
+    return await PlayerBaseService(session).transfer_items(user.id, transfer_data)
 
 
-@router.get("/get-items-recipe/")
+@router.get("/get-items-recipe/", response_model=list[ItemResponseSchema])
 async def get_items_recipe(
         map_id: int,
         user: WebAppUser = Depends(get_user_data_from_request),
@@ -68,7 +76,8 @@ async def get_items_recipe(
 ):
     return await ItemService(session).get_items(map_id, user.id)
 
-@router.patch("/craft-item/")
+
+@router.patch("/craft-item/", response_model=PlayerInventoryResponseSchema)
 async def craft_item(
         craft_data: CraftItemSchema,
         user: WebAppUser = Depends(get_user_data_from_request),

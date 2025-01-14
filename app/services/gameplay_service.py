@@ -12,7 +12,9 @@ from app.repository import (repository_farm_mode, repository_farm_session,
                             repository_player)
 from app.repository.gameplay_repository import repository_item
 from app.schemas.gameplay import (FarmResourcesSchema,
-                                  FarmSessionCreateSchema, FarmSessionSchema, CraftItemSchema)
+                                  FarmSessionCreateSchema, FarmSessionSchema, CraftItemSchema, ItemResponseSchema,
+                                  RecipeSchema)
+from app.schemas.players import PlayerInventoryResponseSchema
 from app.services.base_service import BaseService
 from app.services.player_service import PlayerService
 from app.services.validation_service import ValidationService
@@ -64,8 +66,9 @@ class FarmingService:
 
         await BaseService.commit_or_rollback(self.session)
 
-        time_left = BaseService.get_time_left(farm_session.end_time)
-        return FarmSessionSchema(time_left=time_left, **farm_session.__dict__)
+        total_seconds = int((farm_session.end_time - farm_session.start_time).total_seconds())
+        seconds_pass = int((datetime.now() - farm_session.start_time).total_seconds())
+        return FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
 
     async def _publish_farm_task(self, farm_session, current_farm_mode) -> None:
         task_data = {
@@ -82,7 +85,7 @@ class ItemService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_items(self, map_id: int, telegram_id: int):
+    async def get_items(self, map_id: int, telegram_id: int) -> list[ItemResponseSchema]:
         player = await repository_player.get(
             self.session,
             options=[joinedload(Player.base)],
@@ -96,23 +99,24 @@ class ItemService:
             options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
         )
         response = [
-            {
-                "tier": item.tier,
-                "id": item.id,
-                "name": item.name,
-                "can_craft": player.base.defense_level >= item.tier if player.base else False,
-                "recipe": {
-                    "resources": {
+            ItemResponseSchema(
+                tier=item.tier,
+                id=item.id,
+                name=item.name,
+                can_craft=player.base.defense_level >= item.tier if player.base else False,
+                recipe=RecipeSchema(
+                    resources={
                         recipe.resource.name: recipe.resource_quantity
                         for recipe in item.recipe
                     }
-                },
-            }
+                ),
+            )
             for item in items
         ]
+
         return response
 
-    async def craft_item(self, telegram_id: int, craft_data: CraftItemSchema):
+    async def craft_item(self, telegram_id: int, craft_data: CraftItemSchema) -> PlayerInventoryResponseSchema:
         player = await repository_player.get(
             self.session,
             options=[
@@ -142,6 +146,4 @@ class ItemService:
         await BaseService.commit_or_rollback(self.session)
         await self.session.refresh(player)
 
-        response = [item.item.name for item in player.inventory]
-
-        return {"player_items": response}
+        return PlayerInventoryResponseSchema(items=[inventory_item.item.name for inventory_item in player.inventory])

@@ -13,7 +13,7 @@ ModelType = TypeVar("ModelType")
 class ValidationService:
 
     @staticmethod
-    def does_user_have_enough_resources(costs: list[Type[ModelType]], player_resources: list[PlayerResources]):
+    def does_user_have_enough_resources(costs: list[Type[ModelType]], player_resources: list[PlayerResources]) -> bool:
         if not player_resources:
             return False
         player_resource_dict = {res.resource_id: res.resource_quantity for res in player_resources}
@@ -23,7 +23,7 @@ class ValidationService:
         return True
 
     @staticmethod
-    def can_player_do_something(player: Player):
+    def can_player_do_something(player: Player) -> None:
         if player.status != "waiting":
             raise HTTPException(status_code=400, detail="The player is currently doing some action")
         if not player or player.map_id is None:
@@ -43,14 +43,14 @@ class ValidationService:
             raise HTTPException(status_code=400, detail="Can't farm in this area")
 
     @staticmethod
-    def can_player_start_farming(player_energy: int, farm_mode: FarmMode):
+    def can_player_start_farming(player_energy: int, farm_mode: FarmMode) -> None:
         player_energy -= farm_mode.total_energy
         if player_energy < 0:
             raise HTTPException(status_code=400, detail="Not enough energy to start farming")
 
     @staticmethod
     def can_player_transfer_items(player: Player, base_storage: PlayerBaseStorage, resource_id: int, count: int,
-                                  direction: str):
+                                  direction: str) -> None:
         if not player.base:
             raise HTTPException(status_code=404, detail="Player has no base")
         if player.map_object_id != player.base.map_object_id:
@@ -68,13 +68,14 @@ class ValidationService:
                 raise HTTPException(status_code=400, detail="Not enough resources")
 
     @staticmethod
-    def can_player_craft_item(player: Player, item: Item):
+    def can_player_craft_item(player: Player, item: Item) -> None:
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         if player.map_object_id != player.base.map_object_id:
             raise HTTPException(status_code=404, detail="The player is not at the base")
         if not item:
             raise HTTPException(status_code=404, detail="Item not found")
-
+        if player.base.defense_level < item.tier:
+            raise HTTPException(status_code=400, detail="Upgrade your base to craft this item")
         if not ValidationService.does_user_have_enough_resources(item.recipe, player.resources):
             raise HTTPException(status_code=400, detail="Not enough resources")

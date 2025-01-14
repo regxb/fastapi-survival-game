@@ -15,6 +15,7 @@ class Player(Base):
     energy: Mapped[int] = mapped_column(default=100)
     resource_multiplier: Mapped[int] = mapped_column(default=1)
     energy_multiplier: Mapped[int] = mapped_column(default=1)
+    inventory_slots: Mapped[int] = mapped_column(default=10)
     status: Mapped[str] = mapped_column(default="waiting")
     map_id: Mapped[int] = mapped_column(ForeignKey('maps.id'))
     map_object_id: Mapped[int] = mapped_column(ForeignKey('map_objects.id'), default=1)
@@ -44,7 +45,6 @@ class Inventory(Base):
     __tablename__ = 'inventories'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    slots: Mapped[int] = mapped_column(default=5) # убрать в игрока
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
 

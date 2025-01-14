@@ -1,16 +1,17 @@
+import datetime
+
 from aiogram.utils.web_app import WebAppUser
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import FarmSession
+from app.models import FarmSession, Inventory
 from app.models.player_model import Player, PlayerResources, PlayerBase
 from app.repository import repository_farm_session
 from app.repository.player_repository import repository_player
 from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema
 from app.schemas.players import (BasePlayerSchema, PlayerCreateSchema,
                                  PlayerDBCreateSchema, PlayerSchema, PlayerBaseSchema)
-from app.services.base_service import BaseService
 from app.services.validation_service import ValidationService
 
 
@@ -18,12 +19,12 @@ class PlayerService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_player(self, user: WebAppUser, player_data: PlayerCreateSchema):
+    async def create_player(self, user: WebAppUser, player_data: PlayerCreateSchema) -> PlayerSchema:
         obj_data = PlayerDBCreateSchema(player_id=user.id, name=user.username, map_id=player_data.map_id)
         player = await repository_player.create(self.session, obj_data)
-        return PlayerSchema(resources={}, farm_sessions=None, base=None, in_base=False, **player.__dict__)
+        return PlayerSchema(in_base=False, **player.__dict__)
 
-    async def get_players(self, telegram_id: int):
+    async def get_players(self, telegram_id: int) -> list[BasePlayerSchema]:
         players = await repository_player.get_multi(
             self.session,
             options=[joinedload(Player.base)],
@@ -31,12 +32,13 @@ class PlayerService:
         )
         return [BasePlayerSchema.model_validate(player) for player in players]
 
-    async def get_player(self, map_id: int, telegram_id: int):
+    async def get_player(self, map_id: int, telegram_id: int) -> PlayerSchema:
         player = await repository_player.get(
             self.session,
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.base).joinedload(PlayerBase.storage)
+                joinedload(Player.base).joinedload(PlayerBase.storage),
+                joinedload(Player.inventory).joinedload(Inventory.item)
             ],
             map_id=map_id,
             player_id=telegram_id
@@ -51,9 +53,9 @@ class PlayerService:
             status="in_progress"
         )
 
-        return PlayerResponseService.get_player_response(player, farm_session, self.session)
+        return PlayerResponseService.get_player_response(player, farm_session)
 
-    async def move_player(self, telegram_id: int, player_data: PlayerMoveSchema):
+    async def move_player(self, telegram_id: int, player_data: PlayerMoveSchema) -> PlayerMoveResponseSchema:
         player = await repository_player.get(self.session, map_id=player_data.map_id, player_id=telegram_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
@@ -94,10 +96,11 @@ class PlayerService:
 class PlayerResponseService:
 
     @staticmethod
-    def get_player_response(player: Player, farm_session: FarmSession, session: AsyncSession):
+    def get_player_response(player: Player, farm_session: FarmSession) -> PlayerSchema:
         if farm_session:
-            time_left = BaseService().get_time_left(farm_session.end_time)
-            farm_session_schema = FarmSessionSchema(time_left=time_left, **farm_session.__dict__)
+            total_seconds = int((farm_session.end_time - farm_session.start_time).total_seconds())
+            seconds_pass = int((datetime.datetime.now() - farm_session.start_time).total_seconds())
+            farm_session_schema = FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
 
         else:
             farm_session_schema = None
@@ -118,12 +121,19 @@ class PlayerResponseService:
             base = None
 
         player_data = {key: value for key, value in player.__dict__.items() if key != "base" and key != "resources"}
+        inventory = [{
+            "id": item.item.id,
+            "name": item.item.name,
+            "tier": item.item.tier,
+            "active_item": False
+        } for item in player.inventory]
 
         player_schema = PlayerSchema(
             in_base=in_base,
             base=base,
             farm_sessions=farm_session_schema,
             resources=resources,
+            items=inventory,
             **player_data
         )
 

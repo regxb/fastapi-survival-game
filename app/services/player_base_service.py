@@ -9,11 +9,11 @@ from app.repository.map_repository import repository_resource
 from app.repository.player_repository import repository_player_base_storage, repository_player_base, \
     repository_player_resource
 from app.schemas.gameplay import BuildingCostSchema
-from app.schemas.players import PlayerTransferItemSchema, PlayerBaseStorageCreate, PlayerBaseCreateDBSchema, \
-    PlayerBaseCreateSchema, PlayerResourcesSchema
+from app.schemas.players import PlayerTransferResourceSchema, PlayerBaseStorageCreate, PlayerBaseCreateDBSchema, \
+    PlayerBaseCreateSchema, PlayerResourcesSchema, PlayerTransferItemSchema
 from app.services import MapService
 from app.services.base_service import BaseService
-from app.services.player_service import PlayerResponseService, PlayerService
+from app.services.player_service import PlayerService
 from app.services.validation_service import ValidationService
 
 
@@ -21,19 +21,14 @@ class PlayerBaseService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def move_resource_to_storage(self, telegram_id: int, transfer_data: PlayerTransferItemSchema):
-        player = await repository_player.get(
-            self.session,
-            options=[
-                joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.base).joinedload(PlayerBase.storage)
-            ],
-            player_id=telegram_id,
-            map_id=transfer_data.map_id
-        )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+    async def transfer_items(self, telegram_id: int,  transfer_data: PlayerTransferItemSchema):
 
+        return 123
+
+    async def transfer_resources(
+            self, telegram_id: int, transfer_data: PlayerTransferResourceSchema
+    ) -> PlayerResourcesSchema:
+        player = await self._get_player_with_detail(telegram_id, transfer_data.map_id)
         resource = await repository_resource.get(self.session, name=transfer_data.item.value)
         if not resource:
             raise HTTPException(status_code=404, detail="Resource not found")
@@ -59,16 +54,8 @@ class PlayerBaseService:
                 PlayerBaseStorageCreate(player_base_id=player.base.id, resource_id=resource.id)
             )
 
-        if transfer_data.direction.value == "to_storage":
-            base_storage.resource_quantity += transfer_data.count
-            PlayerService(self.session).update_player_resources(
-                player.resources, resource.id, transfer_data.count, "decrease"
-            )
-        elif transfer_data.direction.value == "from_storage":
-            base_storage.resource_quantity -= transfer_data.count
-            PlayerService(self.session).update_player_resources(
-                player.resources, resource.id, transfer_data.count, "increase"
-            )
+        self._update_resources(transfer_data.direction.value, transfer_data.count, player, resource.id, base_storage)
+
         await BaseService.commit_or_rollback(self.session)
 
         player_resources = {resource.resource.name: resource.resource_quantity for resource in player.resources}
@@ -139,3 +126,41 @@ class PlayerBaseService:
         can_build = ValidationService.does_user_have_enough_resources(costs, player.resources)
         resources = {cost.resource.name: cost.resource_quantity for cost in costs}
         return BuildingCostSchema(can_build=can_build, resources=resources)
+
+    async def _get_player_with_detail(self, telegram_id: int, map_id: int) -> Player:
+        player = await repository_player.get(
+            self.session,
+            options=[
+                joinedload(Player.resources).joinedload(PlayerResources.resource),
+                joinedload(Player.base).joinedload(PlayerBase.storage)
+            ],
+            player_id=telegram_id,
+            map_id=map_id
+        )
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+
+        if not player.base:
+            raise HTTPException(status_code=404, detail="Player has no base")
+
+        return player
+
+
+    def _update_resources(
+            self,
+            direction: str,
+            count: int,
+            player: Player,
+            resource_id: int,
+            base_storage: PlayerBaseStorage
+    ):
+        if direction == "to_storage":
+            base_storage.resource_quantity += count
+            PlayerService(self.session).update_player_resources(
+                player.resources, resource_id, count, "decrease"
+            )
+        elif direction == "from_storage":
+            base_storage.resource_quantity -= count
+            PlayerService(self.session).update_player_resources(
+                player.resources, resource_id, count, "increase"
+            )

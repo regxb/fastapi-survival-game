@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import FarmSessionSchema
+from app.schemas.gameplay import FarmSessionSchema, ItemSchema
 from app.schemas.maps import Resources
 
 
@@ -32,7 +32,7 @@ class PlayerBaseStorageCreateSchema(BaseModel):
 
 class PlayerBaseSchema(BaseModel):
     map_object_id: int
-    resources: Optional[dict]
+    resources: Optional[dict[str, int]]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,24 +48,19 @@ class BasePlayerSchema(BaseModel):
 class PlayerSchema(BasePlayerSchema):
     map_object_id: int
     in_base: bool
-    resources: Optional[dict]
-    base: Optional[PlayerBaseSchema]
-    farm_sessions: Optional[FarmSessionSchema]
+    resources: Optional[dict[str, int]] = None
+    base: Optional[PlayerBaseSchema] = None
+    farm_sessions: Optional[FarmSessionSchema] = None
+    items: Optional[list[dict[str, Any]]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerResourcesSchema(BaseModel):
-    player_resources: dict
-    storage_resources: dict
+    player_resources: dict[str, int]
+    storage_resources: dict[str, int]
 
     model_config = ConfigDict(from_attributes=True)
-
-
-# class PlayerResponseSchema(PlayerSchema):
-#     resources: Optional[dict]
-#
-#     model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerCreateSchema(BaseModel):
@@ -88,8 +83,19 @@ class PlayerBaseStorageCreate(BaseModel):
     resource_id: int
 
 
-class PlayerTransferItemSchema(BaseModel):
+class PlayerTransferResourceSchema(BaseModel):
     map_id: int
-    item: Resources
+    resource: Resources
     count: int = Field(ge=1)
     direction: TransferDirection
+    
+class PlayerTransferItemSchema(BaseModel):
+    map_id: int
+    item_id: int
+    direction: TransferDirection
+
+
+class PlayerInventoryResponseSchema(BaseModel):
+    items: list
+
+    model_config = ConfigDict(from_attributes=True)

@@ -67,15 +67,14 @@ class FarmSessionCreateSchema(BaseModel):
 
 
 class FarmSessionSchema(BaseModel):
-    start_time: datetime
-    end_time: datetime
-    time_left: dict
+    total_seconds: int
+    seconds_pass: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class BuildingCostSchema(BaseModel):
-    resources: dict
+    resources: dict[str, int]
     can_build: bool
 
 
@@ -83,6 +82,22 @@ class BuildingCostResponseSchema(BaseModel):
     resources: list[BuildingCostSchema]
 
 
+class ItemSchema(BaseModel):
+    name: str
+
+
 class CraftItemSchema(BaseModel):
     map_id: int
     item_id: int
+
+
+class RecipeSchema(BaseModel):
+    resources: dict[str, int]
+
+
+class ItemResponseSchema(BaseModel):
+    tier: int
+    id: int
+    name: str
+    can_craft: bool
+    recipe: RecipeSchema

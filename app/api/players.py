@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
 from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema
-from app.schemas.players import BasePlayerSchema, PlayerCreateSchema
+from app.schemas.players import BasePlayerSchema, PlayerCreateSchema, PlayerSchema
 from app.services.player_service import PlayerService
 
 router = APIRouter(prefix="/player", tags=["player"])
 
 
-@router.post("/")
+@router.post("/", response_model=PlayerSchema)
 async def create_player(
         player_data: PlayerCreateSchema,
         user: WebAppUser = Depends(get_user_data_from_request),
@@ -38,7 +38,7 @@ async def move_player(
     return await PlayerService(session).move_player(user.id, player_data)
 
 
-@router.get("/{map_id}/")
+@router.get("/{map_id}/", response_model=PlayerSchema)
 async def get_player(
         map_id: int,
         user: WebAppUser = Depends(get_user_data_from_request),

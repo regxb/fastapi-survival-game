@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.map_model import Map, MapObject, ResourcesZone
+from app.models.map_model import Map, MapObject, ResourcesZone, MapObjectPosition
 from app.repository import map_repository
 from app.repository.map_repository import (repository_map,
                                            repository_map_object,
@@ -31,7 +31,7 @@ class MapService:
             id=map_id)
         return MapResponseSchema.model_validate(map_objects)
 
-    async def create_player_base_map_object(self, name: str, map_id: int):
+    async def create_player_base_map_object(self, name: str, map_id: int) -> MapObject:
         new_map_object = await repository_map_object.create(
             self.session,
             MapObjectCreateSchema(
@@ -43,7 +43,9 @@ class MapService:
         )
         return new_map_object
 
-    async def add_position_to_map_object(self, x1: int, y1: int, x2: int, y2: int, map_object_id: int):
+    async def add_position_to_map_object(
+            self, x1: int, y1: int, x2: int, y2: int, map_object_id: int
+    ) -> MapObjectPosition:
         new_map_object_position = await repository_map_object_position.create(
             self.session,
             MapObjectPositionSchema(
