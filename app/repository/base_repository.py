@@ -131,7 +131,7 @@ class BaseRepository(Generic[ModelType]):
             result = await session.execute(stmt)
             await session.commit()
 
-            return result.rowcount()
+            return result.rowcount
 
         except IntegrityError:
             await session.rollback()
