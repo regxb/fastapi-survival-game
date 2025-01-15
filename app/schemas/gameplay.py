@@ -30,9 +30,15 @@ class PlayerMoveResponseSchema(BaseModel):
 
 
 class ResourceSchema(BaseModel):
+    id: int
     name: str
+    icon: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlayerResourceSchema(ResourceSchema):
+    count: int
 
 
 class FarmResourcesSchema(BaseModel):
@@ -85,6 +91,7 @@ class ItemSchema(BaseModel):
     item_id: int
     name: str
     tier: int
+    icon: str
 
 
 class InventoryItemCreateSchema(BaseModel):
@@ -121,4 +128,5 @@ class ItemResponseSchema(BaseModel):
     id: int
     name: str
     can_craft: bool
+    icon: str
     recipe: RecipeSchema

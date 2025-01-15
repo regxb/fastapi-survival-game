@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, DateTime
+from sqlalchemy import ForeignKey, DateTime,String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base_model import Base
@@ -24,6 +24,7 @@ class Resource(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
+    icon: Mapped[str]
 
     resource_zone: Mapped["ResourcesZone"] = relationship("ResourcesZone", back_populates="resource")
 
@@ -55,6 +56,7 @@ class Item(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
+    icon: Mapped[str]
 
     recipe: Mapped[list["ItemRecipe"]] = relationship("ItemRecipe", uselist=True)
 

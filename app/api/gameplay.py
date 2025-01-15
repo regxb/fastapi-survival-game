@@ -7,7 +7,7 @@ from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
 from app.repository import repository_farm_session
 from app.schemas.gameplay import BuildingType, FarmResourcesSchema, CraftItemSchema, BuildingCostSchema, \
-    FarmSessionSchema, ItemResponseSchema, ItemSchemaResponse
+    FarmSessionSchema, ItemResponseSchema, ItemSchemaResponse, ResourceSchema
 from app.schemas.players import PlayerBaseCreateSchema, PlayerTransferResourceSchema, PlayerResourcesSchema, \
     PlayerInventoryResponseSchema, PlayerTransferItemSchema, PlayerItemsSchema
 from app.services.gameplay_service import FarmingService, ItemService
@@ -30,6 +30,9 @@ async def get_cost_building_base(
 ):
     return await PlayerBaseService(session).get_cost_building_base(building_type.value, user.id, map_id)
 
+@router.get("/resources", response_model=list[ResourceSchema])
+async def get_resources(session: AsyncSession = Depends(get_async_session)):
+    return await FarmingService(session).get_resources()
 
 @router.post("/build-base/")
 async def build_base(

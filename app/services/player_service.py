@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
 
 from aiogram.utils.web_app import WebAppUser
 from fastapi import HTTPException
@@ -12,7 +12,7 @@ from app.models.player_model import Player, PlayerResources, PlayerBase, PlayerI
 from app.repository import repository_farm_session
 from app.repository.player_repository import repository_player
 from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema, ItemSchemaResponse, \
-    ItemSchema
+    ItemSchema, ResourceSchema, PlayerResourceSchema
 from app.schemas.players import (BasePlayerSchema, PlayerCreateSchema,
                                  PlayerDBCreateSchema, PlayerSchema, PlayerBaseSchema)
 from app.services.validation_service import ValidationService
@@ -56,7 +56,6 @@ class PlayerService:
             map_id=map_id,
             status="in_progress"
         )
-
         return PlayerResponseService.get_player_response(player, farm_session)
 
     async def move_player(self, telegram_id: int, player_data: PlayerMoveSchema) -> PlayerMoveResponseSchema:
@@ -107,11 +106,15 @@ class PlayerResponseService:
         return FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
 
     @staticmethod
-    def serialize_resources(resources) -> Optional[dict[str, int]]:
-        filtered_resources = {
-            resource.resource.name: resource.resource_quantity
-            for resource in resources if resource.resource_quantity > 0
-        }
+    def serialize_resources(resources) -> Optional[List[PlayerResourceSchema]]:
+        filtered_resources = [
+            PlayerResourceSchema(id=resource.resource.id,
+                                 name=resource.resource.name,
+                                 icon=resource.resource.icon,
+                                 count=resource.resource_quantity)
+            for resource in resources
+            if resource.resource_quantity > 0
+        ]
         return filtered_resources or None
 
     @staticmethod
@@ -125,7 +128,7 @@ class PlayerResponseService:
 
     @staticmethod
     def serialize_storage_items(items: list[PlayerItemStorage]):
-        return [ItemSchema(item_id=item.id, name=item.item.name, tier=item.tier) for item in items]
+        return [ItemSchema(item_id=item.id, name=item.item.name, tier=item.tier,icon=item.item.icon) for item in items]
 
     @staticmethod
     def serialize_inventory(inventory) -> list[ItemSchemaResponse]:
@@ -134,6 +137,7 @@ class PlayerResponseService:
                 item_id=item.id,
                 name=item.item.name,
                 tier=item.tier,
+                icon=item.item.icon,
                 active_item=False
             )
             for item in inventory

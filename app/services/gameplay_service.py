@@ -2,12 +2,13 @@ import json
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.broker.main import broker
 from app.models import MapObject, Player, ResourcesZone, Inventory
-from app.models.gameplay_model import Item, ItemRecipe
+from app.models.gameplay_model import Item, ItemRecipe, Resource
 from app.repository import (repository_farm_mode, repository_farm_session,
                             repository_player)
 from app.repository.gameplay_repository import repository_item
@@ -79,6 +80,10 @@ class FarmingService:
         }
         await broker.publish(json.dumps(task_data), "farm_session_task")
 
+    async def get_resources(self):
+        result = await self.session.execute(select(Resource).order_by(Resource.id))
+        return result.scalars().all()
+
 
 class ItemService:
     def __init__(self, session: AsyncSession):
@@ -106,6 +111,7 @@ class ItemService:
                 id=item.id,
                 name=item.name,
                 can_craft=ValidationService.does_user_have_enough_resources(item.recipe, player.resources),
+                icon=item.icon,
                 recipe=RecipeSchema(
                     resources={
                         recipe.resource.name: recipe.resource_quantity

@@ -1,10 +1,9 @@
 from enum import Enum
-from typing import Optional, Any
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import FarmSessionSchema, ItemSchemaResponse, ItemSchema
-from app.schemas.maps import Resources
+from app.schemas.gameplay import FarmSessionSchema, ItemSchemaResponse, PlayerResourceSchema
 
 
 class PlayerStatus(Enum):
@@ -26,7 +25,7 @@ class PlayerBaseCreateDBSchema(BaseModel):
 
 class PlayerBaseSchema(BaseModel):
     map_object_id: int
-    resources: Optional[dict[str, int]]
+    resources: Optional[list]
     items: Optional[list]
 
     model_config = ConfigDict(from_attributes=True)
@@ -54,7 +53,7 @@ class PlayerSchema(BaseModel):
     in_base: bool
     base: Optional[PlayerBaseSchema] = None
     farm_sessions: Optional[FarmSessionSchema] = None
-    resources: Optional[dict[str, int]] = None
+    resources: Optional[list[PlayerResourceSchema]] = None
     items: Optional[list[ItemSchemaResponse]] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -97,7 +96,7 @@ class PlayerResourcesStorageCreate(BaseModel):
 
 class PlayerTransferResourceSchema(BaseModel):
     map_id: int
-    resource: Resources
+    resource_id: int
     count: int = Field(ge=1)
     direction: TransferDirection
 
