@@ -82,8 +82,10 @@ class ValidationService:
     def can_player_craft_item(player: Player, item: Item) -> None:
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
+        if not player.base:
+            raise HTTPException(status_code=404, detail="Player has no base")
         if player.map_object_id != player.base.map_object_id:
-            raise HTTPException(status_code=404, detail="The player is not at the base")
+            raise HTTPException(status_code=400, detail="The player is not at the base")
         if not item:
             raise HTTPException(status_code=404, detail="Item not found")
         if not ValidationService.does_user_have_enough_resources(item.recipe, player.resources):

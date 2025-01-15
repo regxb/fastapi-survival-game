@@ -61,8 +61,8 @@ class PlayerSchema(BaseModel):
 
 
 class PlayerResourcesSchema(BaseModel):
-    player_resources: dict[str, int]
-    storage_resources: dict[str, int]
+    player_resources: Optional[dict[str, int]] = None
+    storage_resources: Optional[dict[str, int]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -92,6 +92,7 @@ class PlayerBaseCreateSchema(BaseModel):
 class PlayerResourcesStorageCreate(BaseModel):
     player_base_id: int
     resource_id: int
+    player_id: int
 
 
 class PlayerTransferResourceSchema(BaseModel):

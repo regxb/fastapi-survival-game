@@ -21,7 +21,7 @@ class PlayerBaseService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def transfer_items(self, telegram_id: int, transfer_data: PlayerTransferItemSchema):
+    async def transfer_items(self, telegram_id: int, transfer_data: PlayerTransferItemSchema) -> PlayerItemsSchema:
         player = await repository_player.get(
             self.session,
             options=[
@@ -69,16 +69,18 @@ class PlayerBaseService:
         if not base_storage:
             base_storage = await repository_player_resources_storage.create(
                 self.session,
-                PlayerResourcesStorageCreate(player_base_id=player.base.id, resource_id=resource.id)
+                PlayerResourcesStorageCreate(
+                    player_base_id=player.base.id,
+                    resource_id=resource.id,
+                    player_id=player.id
+                )
             )
 
         self._update_resources(transfer_data.direction.value, transfer_data.count, player, resource.id, base_storage)
-
-        await BaseService.commit_or_rollback(self.session)
         await self.session.refresh(player)
-
         player_resources = PlayerResponseService.serialize_resources(player.resources)
         storage_resources = PlayerResponseService.serialize_resources(player.base.resources)
+        await BaseService.commit_or_rollback(self.session)
 
         return PlayerResourcesSchema(player_resources=player_resources, storage_resources=storage_resources)
 
@@ -164,7 +166,7 @@ class PlayerBaseService:
 
         return player
 
-    async def _update_items(self, player: Player, item_id: int, direction: str, ):
+    async def _update_items(self, player: Player, item_id: int, direction: str, ) -> None:
         if direction == "to_storage":
             item = await repository_inventory.get_by_id(self.session, item_id)
             if not item or item.player_id != player.id:
@@ -187,7 +189,7 @@ class PlayerBaseService:
             player: Player,
             resource_id: int,
             base_storage: PlayerResourcesStorage
-    ):
+    ) -> None:
         if direction == "to_storage":
             base_storage.resource_quantity += count
             PlayerService(self.session).update_player_resources(

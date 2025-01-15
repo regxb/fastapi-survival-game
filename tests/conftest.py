@@ -6,11 +6,11 @@ from pytest_asyncio import is_async_test
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from starlette.testclient import TestClient
 
-from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.broker.main import app as faststream_app
+from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.main import app
 from app.models import (BuildingCost, FarmMode, Map, MapObject,
-                        MapObjectPosition, Resource, ResourcesZone, Player)
+                        MapObjectPosition, Resource, ResourcesZone)
 from app.models.base_model import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
@@ -63,84 +63,83 @@ async def test_broker():
 
 
 async def populate_bd(db_session):
-    async with db_session as session:
-        # add map
-        map1 = Map(height=111, width=222)
-        session.add(map1)
-        map2 = Map(height=333, width=333)
-        session.add(map2)
-        await session.flush()
+    # add map
+    map1 = Map(height=111, width=222)
+    db_session.add(map1)
+    map2 = Map(height=333, width=333)
+    db_session.add(map2)
+    await db_session.flush()
 
-        # add map object(city) and position
-        map_object = MapObject(name="city", type="city", map_id=map1.id, is_farmable=False)
-        session.add(map_object)
-        await session.flush()
-        map_object_position = MapObjectPosition(x1=11, y1=11, x2=15, y2=15, map_object_id=map_object.id)
-        session.add(map_object_position)
+    # add map object(city) and position
+    map_object = MapObject(name="city", type="city", map_id=map1.id, is_farmable=False)
+    db_session.add(map_object)
+    await db_session.flush()
+    map_object_position = MapObjectPosition(x1=11, y1=11, x2=15, y2=15, map_object_id=map_object.id)
+    db_session.add(map_object_position)
 
-        # add map object(quarry) and position
-        quarry_map_object = MapObject(name="quarry", type="stone", map_id=map1.id, is_farmable=True)
-        session.add(quarry_map_object)
-        await session.flush()
-        quarry_map_object_position = MapObjectPosition(x1=22, y1=22, x2=25, y2=25, map_object_id=quarry_map_object.id)
-        session.add(quarry_map_object_position)
+    # add map object(quarry) and position
+    quarry_map_object = MapObject(name="quarry", type="stone", map_id=map1.id, is_farmable=True)
+    db_session.add(quarry_map_object)
+    await db_session.flush()
+    quarry_map_object_position = MapObjectPosition(x1=22, y1=22, x2=25, y2=25, map_object_id=quarry_map_object.id)
+    db_session.add(quarry_map_object_position)
 
-        # add map object(sawmill) and position
-        sawmill_map_object = MapObject(name="sawmill", type="wood", map_id=map1.id, is_farmable=True)
-        session.add(sawmill_map_object)
-        await session.flush()
-        sawmill_map_object_position = MapObjectPosition(x1=32, y1=32, x2=35, y2=35, map_object_id=sawmill_map_object.id)
-        session.add(sawmill_map_object_position)
+    # add map object(sawmill) and position
+    sawmill_map_object = MapObject(name="sawmill", type="wood", map_id=map1.id, is_farmable=True)
+    db_session.add(sawmill_map_object)
+    await db_session.flush()
+    sawmill_map_object_position = MapObjectPosition(x1=32, y1=32, x2=35, y2=35, map_object_id=sawmill_map_object.id)
+    db_session.add(sawmill_map_object_position)
 
-        # add resources
-        wood = Resource(name="wood")
-        stone = Resource(name="stone")
-        session.add(wood)
-        session.add(stone)
-        await session.flush()
+    # add resources
+    wood = Resource(name="wood")
+    stone = Resource(name="stone")
+    db_session.add(wood)
+    db_session.add(stone)
+    await db_session.flush()
 
-        # add resources zone
-        wood_resource_zone = ResourcesZone(map_object_id=sawmill_map_object.id, resource_id=wood.id, map_id=map1.id)
-        session.add(wood_resource_zone)
-        stone_resource_zone = ResourcesZone(map_object_id=quarry_map_object.id, resource_id=stone.id, map_id=map1.id)
-        session.add(stone_resource_zone)
-        await session.flush()
+    # add resources zone
+    wood_resource_zone = ResourcesZone(map_object_id=sawmill_map_object.id, resource_id=wood.id, map_id=map1.id)
+    db_session.add(wood_resource_zone)
+    stone_resource_zone = ResourcesZone(map_object_id=quarry_map_object.id, resource_id=stone.id, map_id=map1.id)
+    db_session.add(stone_resource_zone)
+    await db_session.flush()
 
-        # add farm modes
-        wood_easy_farm_mode = FarmMode(
-            mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=wood_resource_zone.id
-        )
-        session.add(wood_easy_farm_mode)
+    # add farm modes
+    wood_easy_farm_mode = FarmMode(
+        mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=wood_resource_zone.id
+    )
+    db_session.add(wood_easy_farm_mode)
 
-        wood_medium_farm_mode = FarmMode(
-            mode="medium", total_minutes=5, total_energy=25, total_resources=50, resource_zone_id=wood_resource_zone.id
-        )
-        session.add(wood_medium_farm_mode)
+    wood_medium_farm_mode = FarmMode(
+        mode="medium", total_minutes=5, total_energy=25, total_resources=50, resource_zone_id=wood_resource_zone.id
+    )
+    db_session.add(wood_medium_farm_mode)
 
-        wood_hard_farm_mode = FarmMode(
-            mode="hard", total_minutes=10, total_energy=50, total_resources=100, resource_zone_id=wood_resource_zone.id
-        )
-        session.add(wood_hard_farm_mode)
+    wood_hard_farm_mode = FarmMode(
+        mode="hard", total_minutes=10, total_energy=50, total_resources=100, resource_zone_id=wood_resource_zone.id
+    )
+    db_session.add(wood_hard_farm_mode)
 
-        stone_easy_farm_mode = FarmMode(
-            mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=stone_resource_zone.id
-        )
-        session.add(stone_easy_farm_mode)
+    stone_easy_farm_mode = FarmMode(
+        mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=stone_resource_zone.id
+    )
+    db_session.add(stone_easy_farm_mode)
 
-        stone_medium_farm_mode = FarmMode(
-            mode="medium", total_minutes=5, total_energy=25, total_resources=50, resource_zone_id=stone_resource_zone.id
-        )
-        session.add(stone_medium_farm_mode)
+    stone_medium_farm_mode = FarmMode(
+        mode="medium", total_minutes=5, total_energy=25, total_resources=50, resource_zone_id=stone_resource_zone.id
+    )
+    db_session.add(stone_medium_farm_mode)
 
-        stone_hard_farm_mode = FarmMode(
-            mode="hard", total_minutes=10, total_energy=50, total_resources=100, resource_zone_id=stone_resource_zone.id
-        )
-        session.add(stone_hard_farm_mode)
+    stone_hard_farm_mode = FarmMode(
+        mode="hard", total_minutes=10, total_energy=50, total_resources=100, resource_zone_id=stone_resource_zone.id
+    )
+    db_session.add(stone_hard_farm_mode)
 
-        # add building costs
-        building_cost = BuildingCost(type="base", resource_id=wood.id, resource_quantity=10)
-        session.add(building_cost)
-        building_cost = BuildingCost(type="base", resource_id=stone.id, resource_quantity=20)
-        session.add(building_cost)
+    # add building costs
+    building_cost = BuildingCost(type="base", resource_id=wood.id, resource_quantity=10)
+    db_session.add(building_cost)
+    building_cost = BuildingCost(type="base", resource_id=stone.id, resource_quantity=20)
+    db_session.add(building_cost)
 
-        await session.commit()
+    await db_session.commit()

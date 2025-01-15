@@ -9,7 +9,7 @@ from app.repository import repository_farm_session
 from app.schemas.gameplay import BuildingType, FarmResourcesSchema, CraftItemSchema, BuildingCostSchema, \
     FarmSessionSchema, ItemResponseSchema, ItemSchemaResponse
 from app.schemas.players import PlayerBaseCreateSchema, PlayerTransferResourceSchema, PlayerResourcesSchema, \
-    PlayerInventoryResponseSchema, PlayerTransferItemSchema
+    PlayerInventoryResponseSchema, PlayerTransferItemSchema, PlayerItemsSchema
 from app.services.gameplay_service import FarmingService, ItemService
 from app.services.player_base_service import PlayerBaseService
 
@@ -59,7 +59,7 @@ async def transfer_resources(
     return await PlayerBaseService(session).transfer_resources(user.id, transfer_data)
 
 
-@router.post("/transfer-items/")
+@router.post("/transfer-items/", response_model=PlayerItemsSchema)
 async def transfer_item(
         transfer_data: PlayerTransferItemSchema,
         user: WebAppUser = Depends(get_user_data_from_request),
