@@ -55,7 +55,6 @@ class Item(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
-    tier: Mapped[int]
 
     recipe: Mapped[list["ItemRecipe"]] = relationship("ItemRecipe", uselist=True)
 

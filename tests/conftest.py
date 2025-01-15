@@ -10,7 +10,7 @@ from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.broker.main import app as faststream_app
 from app.main import app
 from app.models import (BuildingCost, FarmMode, Map, MapObject,
-                        MapObjectPosition, Resource, ResourcesZone)
+                        MapObjectPosition, Resource, ResourcesZone, Player)
 from app.models.base_model import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)

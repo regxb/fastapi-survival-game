@@ -3,7 +3,7 @@ from typing import Optional, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import FarmSessionSchema, ItemSchema
+from app.schemas.gameplay import FarmSessionSchema, ItemSchemaResponse, ItemSchema
 from app.schemas.maps import Resources
 
 
@@ -24,15 +24,10 @@ class PlayerBaseCreateDBSchema(BaseModel):
     owner_id: int
 
 
-class PlayerBaseStorageCreateSchema(BaseModel):
-    player_base_id: int
-    resource_id: int
-    count: int
-
-
 class PlayerBaseSchema(BaseModel):
     map_object_id: int
     resources: Optional[dict[str, int]]
+    items: Optional[list]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,13 +40,22 @@ class BasePlayerSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PlayerSchema(BasePlayerSchema):
+class PlayerSchema(BaseModel):
+    id: int
+    name: str
+    energy: int
+    # resource_multiplier: float
+    # energy_multiplier: float
+    status: str
+    health: int
+    inventory_slots: int
+    map_id: int
     map_object_id: int
     in_base: bool
-    resources: Optional[dict[str, int]] = None
     base: Optional[PlayerBaseSchema] = None
     farm_sessions: Optional[FarmSessionSchema] = None
-    items: Optional[list[dict[str, Any]]] = None
+    resources: Optional[dict[str, int]] = None
+    items: Optional[list[ItemSchemaResponse]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,6 +63,13 @@ class PlayerSchema(BasePlayerSchema):
 class PlayerResourcesSchema(BaseModel):
     player_resources: dict[str, int]
     storage_resources: dict[str, int]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PlayerItemsSchema(BaseModel):
+    inventory_items: list
+    storage_items: list
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -78,7 +89,7 @@ class PlayerBaseCreateSchema(BaseModel):
     map_id: int
 
 
-class PlayerBaseStorageCreate(BaseModel):
+class PlayerResourcesStorageCreate(BaseModel):
     player_base_id: int
     resource_id: int
 
@@ -88,7 +99,8 @@ class PlayerTransferResourceSchema(BaseModel):
     resource: Resources
     count: int = Field(ge=1)
     direction: TransferDirection
-    
+
+
 class PlayerTransferItemSchema(BaseModel):
     map_id: int
     item_id: int

@@ -1,6 +1,7 @@
 import pytest
 
 from app.models import Player
+from tests.utils import create_player
 
 
 @pytest.mark.asyncio
@@ -15,9 +16,7 @@ async def test_create_player(client, db_session):
 
 @pytest.mark.asyncio
 async def test_get_player(client, db_session):
-    player = Player(map_id=1, player_id=1, name="test_name")
-    db_session.add(player)
-    await db_session.commit()
+    await create_player(db_session)
     response = await client.get("/player/1/")
     assert response.status_code == 200
     response_json = response.json()
@@ -29,7 +28,7 @@ async def test_get_player(client, db_session):
 @pytest.mark.asyncio
 async def test_get_players(client, db_session):
     for i in range(1, 3):
-        player = Player(map_id=i, player_id=1, name="test_name")
+        player = Player(map_id=i, player_id=111, name="test_name")
         db_session.add(player)
     await db_session.commit()
     response = await client.get("/player/")
@@ -40,9 +39,7 @@ async def test_get_players(client, db_session):
 
 @pytest.mark.asyncio
 async def test_move_player(client, db_session):
-    player = Player(map_id=1, player_id=1, name="test_name")
-    db_session.add(player)
-    await db_session.commit()
+    await create_player(db_session)
     response = await client.patch("/player/move-player/", json={"map_id": 1, "map_object_id": 2})
     assert response.status_code == 200
     response_json = response.json()
@@ -59,9 +56,7 @@ async def test_create_player_on_non_exist_map(client):
 
 @pytest.mark.asyncio
 async def test_move_player_on_non_exist_object(client, db_session):
-    player = Player(map_id=1, player_id=1, name="test_name")
-    db_session.add(player)
-    await db_session.commit()
+    await create_player(db_session)
     response = await client.patch("/player/move-player/", json={"map_id": 1, "map_object_id": 22})
     assert response.status_code == 500
     response_json = response.json()

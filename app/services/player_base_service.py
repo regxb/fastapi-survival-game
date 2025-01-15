@@ -3,17 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models import Player, PlayerResources, PlayerBase, BuildingCost, MapObject
-from app.models.player_model import PlayerBaseStorage
+from app.models.player_model import PlayerResourcesStorage, PlayerItemStorage, Inventory
 from app.repository import repository_player, repository_building_cost
 from app.repository.map_repository import repository_resource
-from app.repository.player_repository import repository_player_base_storage, repository_player_base, \
-    repository_player_resource
-from app.schemas.gameplay import BuildingCostSchema
-from app.schemas.players import PlayerTransferResourceSchema, PlayerBaseStorageCreate, PlayerBaseCreateDBSchema, \
-    PlayerBaseCreateSchema, PlayerResourcesSchema, PlayerTransferItemSchema
+from app.repository.player_repository import repository_player_resources_storage, repository_player_base, \
+    repository_player_resource, repository_player_item_storage, repository_inventory
+from app.schemas.gameplay import BuildingCostSchema, ItemStorageCreateSchema, InventoryItemCreateSchema
+from app.schemas.players import PlayerTransferResourceSchema, PlayerResourcesStorageCreate, PlayerBaseCreateDBSchema, \
+    PlayerBaseCreateSchema, PlayerResourcesSchema, PlayerTransferItemSchema, PlayerItemsSchema
 from app.services import MapService
 from app.services.base_service import BaseService
-from app.services.player_service import PlayerService
+from app.services.player_service import PlayerService, PlayerResponseService
 from app.services.validation_service import ValidationService
 
 
@@ -21,26 +21,44 @@ class PlayerBaseService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def transfer_items(self, telegram_id: int,  transfer_data: PlayerTransferItemSchema):
+    async def transfer_items(self, telegram_id: int, transfer_data: PlayerTransferItemSchema):
+        player = await repository_player.get(
+            self.session,
+            options=[
+                joinedload(Player.inventory).joinedload(Inventory.item),
+                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item),
+            ],
+            player_id=telegram_id,
+            map_id=transfer_data.map_id
+        )
 
-        return 123
+        ValidationService.can_player_transfer_items(player, transfer_data.direction.value)
+
+        await self._update_items(player, transfer_data.item_id, transfer_data.direction.value)
+
+        await BaseService.commit_or_rollback(self.session)
+        await self.session.refresh(player)
+
+        storage_items = PlayerResponseService.serialize_storage_items(player.base.items)
+        inventory_items = PlayerResponseService.serialize_inventory(player.inventory)
+        return PlayerItemsSchema(storage_items=storage_items, inventory_items=inventory_items)
 
     async def transfer_resources(
             self, telegram_id: int, transfer_data: PlayerTransferResourceSchema
     ) -> PlayerResourcesSchema:
         player = await self._get_player_with_detail(telegram_id, transfer_data.map_id)
-        resource = await repository_resource.get(self.session, name=transfer_data.item.value)
+        resource = await repository_resource.get(self.session, name=transfer_data.resource.value)
         if not resource:
             raise HTTPException(status_code=404, detail="Resource not found")
 
-        base_storage = await repository_player_base_storage.get(
+        base_storage = await repository_player_resources_storage.get(
             self.session,
-            options=[joinedload(PlayerBaseStorage.resource)],
+            options=[joinedload(PlayerResourcesStorage.resource)],
             player_base_id=player.base.id,
             resource_id=resource.id,
         )
 
-        ValidationService.can_player_transfer_items(
+        ValidationService.can_player_transfer_resources(
             player,
             base_storage,
             resource.id,
@@ -49,17 +67,18 @@ class PlayerBaseService:
         )
 
         if not base_storage:
-            base_storage = await repository_player_base_storage.create(
+            base_storage = await repository_player_resources_storage.create(
                 self.session,
-                PlayerBaseStorageCreate(player_base_id=player.base.id, resource_id=resource.id)
+                PlayerResourcesStorageCreate(player_base_id=player.base.id, resource_id=resource.id)
             )
 
         self._update_resources(transfer_data.direction.value, transfer_data.count, player, resource.id, base_storage)
 
         await BaseService.commit_or_rollback(self.session)
+        await self.session.refresh(player)
 
-        player_resources = {resource.resource.name: resource.resource_quantity for resource in player.resources}
-        storage_resources = {resource.resource.name: resource.resource_quantity for resource in player.base.storage}
+        player_resources = PlayerResponseService.serialize_resources(player.resources)
+        storage_resources = PlayerResponseService.serialize_resources(player.base.resources)
 
         return PlayerResourcesSchema(player_resources=player_resources, storage_resources=storage_resources)
 
@@ -132,7 +151,7 @@ class PlayerBaseService:
             self.session,
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.base).joinedload(PlayerBase.storage)
+                joinedload(Player.base).joinedload(PlayerBase.resources)
             ],
             player_id=telegram_id,
             map_id=map_id
@@ -145,6 +164,21 @@ class PlayerBaseService:
 
         return player
 
+    async def _update_items(self, player: Player, item_id: int, direction: str, ):
+        if direction == "to_storage":
+            item = await repository_inventory.get_by_id(self.session, item_id)
+            if not item or item.player_id != player.id:
+                raise HTTPException(status_code=404, detail="Item not found")
+            item_storage = ItemStorageCreateSchema(player_base_id=player.base.id, **item.__dict__)
+            await repository_player_item_storage.create(self.session, item_storage)
+            await self.session.delete(item)
+        elif direction == "from_storage":
+            item = await repository_player_item_storage.get_by_id(self.session, item_id)
+            if not item or item.player_id != player.id:
+                raise HTTPException(status_code=404, detail="Item not found")
+            inventory_item = InventoryItemCreateSchema.model_validate(item)
+            await repository_inventory.create(self.session, inventory_item)
+            await self.session.delete(item)
 
     def _update_resources(
             self,
@@ -152,7 +186,7 @@ class PlayerBaseService:
             count: int,
             player: Player,
             resource_id: int,
-            base_storage: PlayerBaseStorage
+            base_storage: PlayerResourcesStorage
     ):
         if direction == "to_storage":
             base_storage.resource_quantity += count

@@ -7,7 +7,7 @@ from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
 from app.repository import repository_farm_session
 from app.schemas.gameplay import BuildingType, FarmResourcesSchema, CraftItemSchema, BuildingCostSchema, \
-    FarmSessionSchema, ItemResponseSchema
+    FarmSessionSchema, ItemResponseSchema, ItemSchemaResponse
 from app.schemas.players import PlayerBaseCreateSchema, PlayerTransferResourceSchema, PlayerResourcesSchema, \
     PlayerInventoryResponseSchema, PlayerTransferItemSchema
 from app.services.gameplay_service import FarmingService, ItemService
@@ -59,7 +59,7 @@ async def transfer_resources(
     return await PlayerBaseService(session).transfer_resources(user.id, transfer_data)
 
 
-@router.patch("/transfer-items/", response_model=PlayerResourcesSchema)
+@router.post("/transfer-items/")
 async def transfer_item(
         transfer_data: PlayerTransferItemSchema,
         user: WebAppUser = Depends(get_user_data_from_request),
@@ -77,7 +77,7 @@ async def get_items_recipe(
     return await ItemService(session).get_items(map_id, user.id)
 
 
-@router.patch("/craft-item/", response_model=PlayerInventoryResponseSchema)
+@router.patch("/craft-item/", response_model=list[ItemSchemaResponse])
 async def craft_item(
         craft_data: CraftItemSchema,
         user: WebAppUser = Depends(get_user_data_from_request),

@@ -45,7 +45,7 @@ async def test_build_base(client, db_session):
 
 @pytest.mark.asyncio
 async def test_start_farm(client, db_session, test_broker):
-    player = Player(map_id=1, player_id=1, name="test_name", map_object_id=2)
+    player = Player(map_id=1, player_id=111, name="test_name", map_object_id=2)
     db_session.add(player)
     await db_session.flush()
     await db_session.commit()

@@ -1,15 +1,18 @@
 import datetime
+from typing import Optional
 
 from aiogram.utils.web_app import WebAppUser
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import FarmSession, Inventory
-from app.models.player_model import Player, PlayerResources, PlayerBase
+from app.models import Inventory
+from app.models.gameplay_model import Item
+from app.models.player_model import Player, PlayerResources, PlayerBase, PlayerItemStorage
 from app.repository import repository_farm_session
 from app.repository.player_repository import repository_player
-from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema
+from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema, ItemSchemaResponse, \
+    ItemSchema
 from app.schemas.players import (BasePlayerSchema, PlayerCreateSchema,
                                  PlayerDBCreateSchema, PlayerSchema, PlayerBaseSchema)
 from app.services.validation_service import ValidationService
@@ -37,7 +40,8 @@ class PlayerService:
             self.session,
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.base).joinedload(PlayerBase.storage),
+                joinedload(Player.base).joinedload(PlayerBase.resources),
+                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item),
                 joinedload(Player.inventory).joinedload(Inventory.item)
             ],
             map_id=map_id,
@@ -94,41 +98,58 @@ class PlayerService:
 
 
 class PlayerResponseService:
+    @staticmethod
+    def serialize_farm_session(farm_session) -> Optional[FarmSessionSchema]:
+        if not farm_session:
+            return None
+        total_seconds = int((farm_session.end_time - farm_session.start_time).total_seconds())
+        seconds_pass = int((datetime.datetime.now() - farm_session.start_time).total_seconds())
+        return FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
 
     @staticmethod
-    def get_player_response(player: Player, farm_session: FarmSession) -> PlayerSchema:
-        if farm_session:
-            total_seconds = int((farm_session.end_time - farm_session.start_time).total_seconds())
-            seconds_pass = int((datetime.datetime.now() - farm_session.start_time).total_seconds())
-            farm_session_schema = FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
-
-        else:
-            farm_session_schema = None
-
-        in_base = player.map_object_id == player.base.map_object_id if player.base else False
-        resources = {
-            resource.resource.name: resource.resource_quantity for resource in player.resources if
-            resource.resource_quantity > 0
+    def serialize_resources(resources) -> Optional[dict[str, int]]:
+        filtered_resources = {
+            resource.resource.name: resource.resource_quantity
+            for resource in resources if resource.resource_quantity > 0
         }
-        resources = None if not resources else resources
+        return filtered_resources or None
 
-        if player.base:
-            storage_resources = {resource.resource.name: resource.resource_quantity for resource in player.base.storage
-                                 if resource.resource_quantity > 0}
-            storage_resources = None if not storage_resources else storage_resources
-            base = PlayerBaseSchema(map_object_id=player.base.map_object_id, resources=storage_resources)
-        else:
-            base = None
+    @staticmethod
+    def serialize_base(base: PlayerBase) -> Optional[PlayerBaseSchema]:
+        if not base:
+            return None
 
-        player_data = {key: value for key, value in player.__dict__.items() if key != "base" and key != "resources"}
-        inventory = [{
-            "id": item.item.id,
-            "name": item.item.name,
-            "tier": item.item.tier,
-            "active_item": False
-        } for item in player.inventory]
+        resources = PlayerResponseService.serialize_resources(base.resources)
+        items = PlayerResponseService.serialize_storage_items(base.items)
+        return PlayerBaseSchema(map_object_id=base.map_object_id, items=items, resources=resources)
 
-        player_schema = PlayerSchema(
+    @staticmethod
+    def serialize_storage_items(items: list[PlayerItemStorage]):
+        return [ItemSchema(item_id=item.id, name=item.item.name, tier=item.tier) for item in items]
+
+    @staticmethod
+    def serialize_inventory(inventory) -> list[ItemSchemaResponse]:
+        return [
+            ItemSchemaResponse(
+                item_id=item.id,
+                name=item.item.name,
+                tier=item.tier,
+                active_item=False
+            )
+            for item in inventory
+        ]
+
+    @staticmethod
+    def get_player_response(player, farm_session) -> PlayerSchema:
+        farm_session_schema = PlayerResponseService.serialize_farm_session(farm_session)
+        in_base = player.map_object_id == player.base.map_object_id if player.base else False
+        resources = PlayerResponseService.serialize_resources(player.resources)
+        base = PlayerResponseService.serialize_base(player.base)
+        inventory = PlayerResponseService.serialize_inventory(player.inventory)
+        player_data = {key: value for key, value in player.__dict__.items()
+                       if key not in ["base", "resources", "inventory"]}
+
+        return PlayerSchema(
             in_base=in_base,
             base=base,
             farm_sessions=farm_session_schema,
@@ -136,5 +157,3 @@ class PlayerResponseService:
             items=inventory,
             **player_data
         )
-
-        return player_schema

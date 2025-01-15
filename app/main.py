@@ -46,7 +46,7 @@ class UserMiddleware(BaseHTTPMiddleware):
             except HTTPException:
                 return JSONResponse(status_code=401, content={"detail": "Invalid token"})
         else:
-            request.state.user = WebAppUser(first_name="Tom", username="tom", id=1, photo_url="photo_url_tom")
+            request.state.user = WebAppUser(first_name="Tom", username="tom", id=111, photo_url="photo_url_tom")
 
         return await call_next(request)
 

@@ -47,6 +47,7 @@ class Inventory(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
+    tier: Mapped[int] = mapped_column(default=1)
 
     item: Mapped["Item"] = relationship("Item")
 
@@ -62,15 +63,29 @@ class PlayerBase(Base):
 
     map_object: Mapped["MapObject"] = relationship("MapObject")
     player: Mapped["Player"] = relationship("Player", back_populates="base")
-    storage: Mapped[list["PlayerBaseStorage"]] = relationship("PlayerBaseStorage", uselist=True)
+    resources: Mapped[list["PlayerResourcesStorage"]] = relationship("PlayerResourcesStorage", uselist=True)
+    items: Mapped[list["PlayerItemStorage"]] = relationship("PlayerItemStorage", uselist=True)
 
 
-class PlayerBaseStorage(Base):
-    __tablename__ = 'players_bases_storage'
+class PlayerResourcesStorage(Base):
+    __tablename__ = 'players_resources_storage'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_quantity: Mapped[int] = mapped_column(default=0)
-    player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))
+    player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
+    player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
 
     resource: Mapped["Resource"] = relationship("Resource")
+
+
+class PlayerItemStorage(Base):
+    __tablename__ = 'players_items_storage'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tier: Mapped[int] = mapped_column(default=1)
+    item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
+    player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
+    player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
+
+    item: Mapped["Item"] = relationship("Item")

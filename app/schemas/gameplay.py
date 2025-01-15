@@ -30,7 +30,6 @@ class PlayerMoveResponseSchema(BaseModel):
 
 
 class ResourceSchema(BaseModel):
-    id: int
     name: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -83,7 +82,30 @@ class BuildingCostResponseSchema(BaseModel):
 
 
 class ItemSchema(BaseModel):
+    item_id: int
     name: str
+    tier: int
+
+
+class InventoryItemCreateSchema(BaseModel):
+    item_id: int
+    tier: int
+    player_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ItemStorageCreateSchema(BaseModel):
+    player_base_id: int
+    item_id: int
+    tier: int
+    player_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ItemSchemaResponse(ItemSchema):
+    active_item: bool = False
 
 
 class CraftItemSchema(BaseModel):
@@ -96,7 +118,6 @@ class RecipeSchema(BaseModel):
 
 
 class ItemResponseSchema(BaseModel):
-    tier: int
     id: int
     name: str
     can_craft: bool

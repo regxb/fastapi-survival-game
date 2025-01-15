@@ -16,6 +16,6 @@ async def get_maps(
     return await MapService(session).get_maps(offset, limit)
 
 
-@router.get("/{map_id}/", response_model=MapResponseSchema)
+@router.get("/{map_id}/")
 async def get_map(map_id: int, session: AsyncSession = Depends(get_async_session)):
     return await MapService(session).get_map_with_objects(map_id)
