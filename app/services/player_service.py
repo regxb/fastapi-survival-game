@@ -12,7 +12,7 @@ from app.models.player_model import Player, PlayerResources, PlayerBase, PlayerI
 from app.repository import repository_farm_session
 from app.repository.player_repository import repository_player
 from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema, ItemSchemaResponse, \
-    ItemSchema, ResourceSchema, PlayerResourceSchema
+    ItemSchema, ResourceSchema, ResourceCountSchema
 from app.schemas.players import (BasePlayerSchema, PlayerCreateSchema,
                                  PlayerDBCreateSchema, PlayerSchema, PlayerBaseSchema)
 from app.services.validation_service import ValidationService
@@ -106,12 +106,12 @@ class PlayerResponseService:
         return FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
 
     @staticmethod
-    def serialize_resources(resources) -> Optional[List[PlayerResourceSchema]]:
+    def serialize_resources(resources) -> Optional[List[ResourceCountSchema]]:
         filtered_resources = [
-            PlayerResourceSchema(id=resource.resource.id,
-                                 name=resource.resource.name,
-                                 icon=resource.resource.icon,
-                                 count=resource.resource_quantity)
+            ResourceCountSchema(id=resource.resource.id,
+                                name=resource.resource.name,
+                                icon=resource.resource.icon,
+                                count=resource.resource_quantity)
             for resource in resources
             if resource.resource_quantity > 0
         ]

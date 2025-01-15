@@ -14,7 +14,7 @@ from app.repository import (repository_farm_mode, repository_farm_session,
 from app.repository.gameplay_repository import repository_item
 from app.schemas.gameplay import (FarmResourcesSchema,
                                   FarmSessionCreateSchema, FarmSessionSchema, CraftItemSchema, ItemResponseSchema,
-                                  RecipeSchema, ItemSchemaResponse)
+                                  RecipeSchema, ItemSchemaResponse, ResourceCountSchema)
 from app.services.base_service import BaseService
 from app.services.player_service import PlayerService, PlayerResponseService
 from app.services.validation_service import ValidationService
@@ -113,10 +113,7 @@ class ItemService:
                 can_craft=ValidationService.does_user_have_enough_resources(item.recipe, player.resources),
                 icon=item.icon,
                 recipe=RecipeSchema(
-                    resources={
-                        recipe.resource.name: recipe.resource_quantity
-                        for recipe in item.recipe
-                    }
+                    resources=[ResourceCountSchema(id=recipe.resource.id, name=recipe.resource.name, count=recipe.resource_quantity, icon=recipe.resource.icon) for recipe in item.recipe]
                 ),
             )
             for item in items

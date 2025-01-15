@@ -37,7 +37,7 @@ class ResourceSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PlayerResourceSchema(ResourceSchema):
+class ResourceCountSchema(ResourceSchema):
     count: int
 
 
@@ -121,7 +121,7 @@ class CraftItemSchema(BaseModel):
 
 
 class RecipeSchema(BaseModel):
-    resources: dict[str, int]
+    resources: list[ResourceCountSchema]
 
 
 class ItemResponseSchema(BaseModel):

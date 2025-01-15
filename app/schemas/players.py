@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import FarmSessionSchema, ItemSchemaResponse, PlayerResourceSchema
+from app.schemas.gameplay import FarmSessionSchema, ItemSchemaResponse, ResourceCountSchema
 
 
 class PlayerStatus(Enum):
@@ -53,15 +53,15 @@ class PlayerSchema(BaseModel):
     in_base: bool
     base: Optional[PlayerBaseSchema] = None
     farm_sessions: Optional[FarmSessionSchema] = None
-    resources: Optional[list[PlayerResourceSchema]] = None
+    resources: Optional[list[ResourceCountSchema]] = None
     items: Optional[list[ItemSchemaResponse]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerResourcesSchema(BaseModel):
-    player_resources: Optional[dict[str, int]] = None
-    storage_resources: Optional[dict[str, int]] = None
+    player_resources: Optional[list] = None
+    storage_resources: Optional[list] = None
 
     model_config = ConfigDict(from_attributes=True)
 
