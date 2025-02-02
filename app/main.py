@@ -7,7 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api.gameplay import router as gameplay_router
+from app.api.bases import router as bases_router
+from app.api.items import router as items_router
+from app.api.resources import router as resources_router
 from app.api.maps import router as maps_router
 from app.api.players import router as players_router
 from app.core.config import BOT_TOKEN, DEV
@@ -30,7 +32,9 @@ else:
 
 app.include_router(maps_router)
 app.include_router(players_router)
-app.include_router(gameplay_router)
+app.include_router(bases_router)
+app.include_router(items_router)
+app.include_router(resources_router)
 
 
 class UserMiddleware(BaseHTTPMiddleware):

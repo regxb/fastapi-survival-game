@@ -6,37 +6,32 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import Inventory
-from app.models.gameplay_model import Item
-from app.models.player_model import Player, PlayerResources, PlayerBase, PlayerItemStorage
-from app.repository import repository_farm_session
-from app.repository.player_repository import repository_player
-from app.schemas.gameplay import PlayerMoveResponseSchema, PlayerMoveSchema, FarmSessionSchema, ItemSchemaResponse, \
-    ItemSchema, ResourceSchema, ResourceCountSchema
-from app.schemas.players import (BasePlayerSchema, PlayerCreateSchema,
-                                 PlayerDBCreateSchema, PlayerSchema, PlayerBaseSchema)
-from app.services.validation_service import ValidationService
+from app.models import Inventory, Player, PlayerResources, PlayerBase, PlayerItemStorage
+from app.repository import farm_session_repository, player_repository
+from app.schemas import PlayerDBCreateSchema, PlayerCreateSchema, PlayerSchema, BasePlayerSchema, FarmSessionSchema, \
+    ResourceCountSchema, PlayerBaseSchema, ItemSchema, ItemSchemaResponse, PlayerMoveSchema, PlayerMoveResponseSchema
+from app.services.validation import ValidationService
 
 
 class PlayerService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create_player(self, user: WebAppUser, player_data: PlayerCreateSchema) -> PlayerSchema:
+    async def create(self, user: WebAppUser, player_data: PlayerCreateSchema) -> PlayerSchema:
         obj_data = PlayerDBCreateSchema(player_id=user.id, name=user.username, map_id=player_data.map_id)
-        player = await repository_player.create(self.session, obj_data)
+        player = await player_repository.create(self.session, obj_data)
         return PlayerSchema(in_base=False, **player.__dict__)
 
     async def get_players(self, telegram_id: int) -> list[BasePlayerSchema]:
-        players = await repository_player.get_multi(
+        players = await player_repository.get_multi(
             self.session,
             options=[joinedload(Player.base)],
             player_id=telegram_id
         )
         return [BasePlayerSchema.model_validate(player) for player in players]
 
-    async def get_player(self, map_id: int, telegram_id: int) -> PlayerSchema:
-        player = await repository_player.get(
+    async def get(self, map_id: int, telegram_id: int) -> PlayerSchema:
+        player = await player_repository.get(
             self.session,
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
@@ -50,7 +45,7 @@ class PlayerService:
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
 
-        farm_session = await repository_farm_session.get(
+        farm_session = await farm_session_repository.get(
             self.session,
             player_id=player.id,
             map_id=map_id,
@@ -58,15 +53,15 @@ class PlayerService:
         )
         return PlayerResponseService.get_player_response(player, farm_session)
 
-    async def move_player(self, telegram_id: int, player_data: PlayerMoveSchema) -> PlayerMoveResponseSchema:
-        player = await repository_player.get(self.session, map_id=player_data.map_id, player_id=telegram_id)
+    async def move(self, telegram_id: int, player_data: PlayerMoveSchema) -> PlayerMoveResponseSchema:
+        player = await player_repository.get(self.session, map_id=player_data.map_id, player_id=telegram_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         ValidationService.can_player_do_something(player)
         if player.map_object_id == player_data.map_object_id:
             raise HTTPException(status_code=409, detail="The user is already at this place")
 
-        new_player_position = await repository_player.update(
+        new_player_position = await player_repository.update(
             self.session, player_data, player_id=telegram_id, map_id=player_data.map_id
         )
         return PlayerMoveResponseSchema(new_map_object_id=new_player_position.map_object_id, player_id=player.id)
@@ -76,7 +71,7 @@ class PlayerService:
 
         update_data = {"energy": Player.energy + 1}
 
-        updated_count = await repository_player.update_multiple(
+        updated_count = await player_repository.update_multiple(
             session=self.session,
             model=Player,
             obj_in=update_data,
@@ -85,7 +80,7 @@ class PlayerService:
         print(f"Updated {updated_count} rows")
 
     @staticmethod
-    def update_player_resources(
+    def update_resources(
             player_resources: list[PlayerResources], resource_id: int, quantity: int, action: str
     ) -> None:
         for resource in player_resources:
@@ -128,11 +123,12 @@ class PlayerResponseService:
 
     @staticmethod
     def serialize_storage_items(items: list[PlayerItemStorage]):
-        return [ItemSchema(item_id=item.id, name=item.item.name, tier=item.tier,icon=item.item.icon) for item in items]
+        items =[ItemSchema(item_id=item.id, name=item.item.name, tier=item.tier, icon=item.item.icon) for item in items]
+        return items or None
 
     @staticmethod
-    def serialize_inventory(inventory) -> list[ItemSchemaResponse]:
-        return [
+    def serialize_inventory(inventory) -> Optional[List[ItemSchemaResponse]]:
+        items = [
             ItemSchemaResponse(
                 item_id=item.id,
                 name=item.item.name,
@@ -142,6 +138,7 @@ class PlayerResponseService:
             )
             for item in inventory
         ]
+        return items or None
 
     @staticmethod
     def get_player_response(player, farm_session) -> PlayerSchema:

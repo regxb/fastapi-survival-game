@@ -10,8 +10,9 @@ from app.broker.main import app as faststream_app
 from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.main import app
 from app.models import (BuildingCost, FarmMode, Map, MapObject,
-                        MapObjectPosition, Resource, ResourcesZone)
-from app.models.base_model import Base
+                        MapObjectPosition, Resource, ResourcesZone, Player, PlayerResources, PlayerBase, Inventory,
+                        Item, ItemRecipe, PlayerItemStorage)
+from app.models.base import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 async_session_maker = async_sessionmaker(
@@ -40,7 +41,6 @@ async def connection_test():
 @pytest.fixture()
 async def db_session(connection_test):
     async with async_session_maker() as session:
-        await populate_bd(session)
         yield session
         await session.rollback()
         await session.close()
@@ -62,84 +62,131 @@ async def test_broker():
         yield broker
 
 
-async def populate_bd(db_session):
-    # add map
+# database fixture
+
+@pytest.fixture
+async def map_with_objects(db_session):
     map1 = Map(height=111, width=222)
     db_session.add(map1)
-    map2 = Map(height=333, width=333)
-    db_session.add(map2)
     await db_session.flush()
 
-    # add map object(city) and position
-    map_object = MapObject(name="city", type="city", map_id=map1.id, is_farmable=False)
-    db_session.add(map_object)
+    map_object1 = MapObject(name="city", type="city", map_id=map1.id, is_farmable=False)
+    db_session.add(map_object1)
     await db_session.flush()
-    map_object_position = MapObjectPosition(x1=11, y1=11, x2=15, y2=15, map_object_id=map_object.id)
+    map_object_position = MapObjectPosition(x1=11, y1=11, x2=15, y2=15, map_object_id=map_object1.id)
     db_session.add(map_object_position)
 
-    # add map object(quarry) and position
-    quarry_map_object = MapObject(name="quarry", type="stone", map_id=map1.id, is_farmable=True)
-    db_session.add(quarry_map_object)
+    map_object2 = MapObject(name="sawmill", type="wood", map_id=map1.id, is_farmable=True)
+    db_session.add(map_object2)
     await db_session.flush()
-    quarry_map_object_position = MapObjectPosition(x1=22, y1=22, x2=25, y2=25, map_object_id=quarry_map_object.id)
-    db_session.add(quarry_map_object_position)
-
-    # add map object(sawmill) and position
-    sawmill_map_object = MapObject(name="sawmill", type="wood", map_id=map1.id, is_farmable=True)
-    db_session.add(sawmill_map_object)
-    await db_session.flush()
-    sawmill_map_object_position = MapObjectPosition(x1=32, y1=32, x2=35, y2=35, map_object_id=sawmill_map_object.id)
+    sawmill_map_object_position = MapObjectPosition(x1=32, y1=32, x2=35, y2=35, map_object_id=map_object2.id)
     db_session.add(sawmill_map_object_position)
 
-    # add resources
-    wood = Resource(name="wood")
-    stone = Resource(name="stone")
+    await db_session.commit()
+
+    return [map_object1, map_object2]
+
+
+@pytest.fixture
+async def resources(db_session):
+    wood = Resource(name="wood", icon="icon.svg")
+    stone = Resource(name="stone", icon="icon.svg")
     db_session.add(wood)
     db_session.add(stone)
-    await db_session.flush()
+    await db_session.commit()
 
-    # add resources zone
-    wood_resource_zone = ResourcesZone(map_object_id=sawmill_map_object.id, resource_id=wood.id, map_id=map1.id)
+
+@pytest.fixture
+async def resources_zone(db_session, resources):
+    wood_resource_zone = ResourcesZone(map_object_id=2, resource_id=1, map_id=1)
     db_session.add(wood_resource_zone)
-    stone_resource_zone = ResourcesZone(map_object_id=quarry_map_object.id, resource_id=stone.id, map_id=map1.id)
-    db_session.add(stone_resource_zone)
-    await db_session.flush()
+    await db_session.commit()
 
-    # add farm modes
+
+@pytest.fixture
+async def farming_mode(db_session, resources_zone):
     wood_easy_farm_mode = FarmMode(
-        mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=wood_resource_zone.id
+        mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=1
     )
     db_session.add(wood_easy_farm_mode)
+    await db_session.commit()
 
-    wood_medium_farm_mode = FarmMode(
-        mode="medium", total_minutes=5, total_energy=25, total_resources=50, resource_zone_id=wood_resource_zone.id
-    )
-    db_session.add(wood_medium_farm_mode)
 
-    wood_hard_farm_mode = FarmMode(
-        mode="hard", total_minutes=10, total_energy=50, total_resources=100, resource_zone_id=wood_resource_zone.id
-    )
-    db_session.add(wood_hard_farm_mode)
-
-    stone_easy_farm_mode = FarmMode(
-        mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=stone_resource_zone.id
-    )
-    db_session.add(stone_easy_farm_mode)
-
-    stone_medium_farm_mode = FarmMode(
-        mode="medium", total_minutes=5, total_energy=25, total_resources=50, resource_zone_id=stone_resource_zone.id
-    )
-    db_session.add(stone_medium_farm_mode)
-
-    stone_hard_farm_mode = FarmMode(
-        mode="hard", total_minutes=10, total_energy=50, total_resources=100, resource_zone_id=stone_resource_zone.id
-    )
-    db_session.add(stone_hard_farm_mode)
-
-    # add building costs
-    building_cost = BuildingCost(type="base", resource_id=wood.id, resource_quantity=10)
+@pytest.fixture
+async def building_cost(db_session, resources):
+    building_cost = BuildingCost(type="base", resource_id=1, resource_quantity=10)
     db_session.add(building_cost)
-    building_cost = BuildingCost(type="base", resource_id=stone.id, resource_quantity=20)
+    building_cost = BuildingCost(type="base", resource_id=2, resource_quantity=20)
     db_session.add(building_cost)
 
+    await db_session.commit()
+
+
+@pytest.fixture
+async def player(db_session, map_with_objects):
+    player = Player(map_id=1, player_id=111, name="test_name")
+    db_session.add(player)
+    await db_session.commit()
+
+
+@pytest.fixture
+async def player_resources(db_session, player, resources):
+    player_resources = PlayerResources(player_id=1, resource_id=1, resource_quantity=10)
+    db_session.add(player_resources)
+    player_resources = PlayerResources(player_id=1, resource_id=2, resource_quantity=20)
+    db_session.add(player_resources)
+    await db_session.commit()
+
+@pytest.fixture
+async def map_(db_session):
+    map_ = Map(height=333, width=333)
+    db_session.add(map_)
+    await db_session.commit()
+
+@pytest.fixture
+async def player_base(db_session, player, map_):
+    player_base = PlayerBase(map_object_id=1, map_id=1, owner_id=1)
+    db_session.add(player_base)
+    await db_session.commit()
+
+@pytest.fixture
+async def player_outside_base(db_session, player, map_):
+    player_base = PlayerBase(map_object_id=2, map_id=1, owner_id=1)
+    db_session.add(player_base)
+    await db_session.commit()
+
+@pytest.fixture
+async def player_with_items(db_session, player, item):
+    inventory = Inventory(player_id=1, item_id=1, tier=1)
+    db_session.add(inventory)
+    await db_session.commit()
+
+
+@pytest.fixture
+async def item(db_session):
+    item = Item(name="test_name", icon="icon.svg")
+    db_session.add(item)
+    await db_session.commit()
+
+
+@pytest.fixture
+async def items_recipe(db_session, item, resources):
+    item_recipe = ItemRecipe(item_id=1, resource_id=1, resource_quantity=5)
+    db_session.add(item_recipe)
+    await db_session.commit()
+
+
+@pytest.fixture
+async def player_base_storage_with_items(db_session, player_base, item):
+    item_storage = PlayerItemStorage(item_id=1, player_id=1, player_base_id=1)
+    db_session.add(item_storage)
+    await db_session.commit()
+
+
+@pytest.fixture
+async def player_with_resources(db_session, player, resources):
+    player_resources = PlayerResources(player_id=1, resource_id=1, resource_quantity=10)
+    db_session.add(player_resources)
+    player_resources = PlayerResources(player_id=1, resource_id=2, resource_quantity=20)
+    db_session.add(player_resources)
     await db_session.commit()

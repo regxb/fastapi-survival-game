@@ -1,8 +1,11 @@
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base_model import Base
-from app.models.gameplay_model import FarmSession, Resource, Item
+from app.models.base import Base
+from app.models.map import MapObject
+from app.models.resource import Resource
+from app.models.item import Item
+from app.models.farm import FarmSession
 
 
 class Player(Base):

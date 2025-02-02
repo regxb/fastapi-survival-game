@@ -8,8 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from app.core import config
 from app.core.database import async_session_maker
 from app.models import PlayerResources
-from app.repository import (repository_farm_session, repository_player,
-                            repository_player_resource)
+from app.repository import (farm_session_repository, player_repository,
+                            player_resource_repository)
 
 router = RedisRouter()
 
@@ -22,15 +22,15 @@ async def farm_session_task(message: str):
     else:
         await asyncio.sleep(data["total_minutes"] * 60)
     async with async_session_maker() as session:
-        farm_session = await repository_farm_session.get_by_id(session, data["farm_session_id"])
+        farm_session = await farm_session_repository.get_by_id(session, data["farm_session_id"])
         if not farm_session or farm_session.status != "in_progress":
             return
         farm_session.status = "completed"
 
-        player = await repository_player.get_by_id(session, farm_session.player_id)
+        player = await player_repository.get_by_id(session, farm_session.player_id)
         player.status = "waiting"
 
-        player_resource = await repository_player_resource.get(
+        player_resource = await player_resource_repository.get(
             session,
             player_id=farm_session.player_id,
             resource_id=farm_session.resource_id

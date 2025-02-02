@@ -3,7 +3,9 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import FarmSessionSchema, ItemSchemaResponse, ResourceCountSchema
+from app.schemas.farm import FarmSessionSchema
+from app.schemas.item import ItemSchemaResponse
+from app.schemas.resource import ResourceCountSchema
 
 
 class PlayerStatus(Enum):
@@ -67,8 +69,8 @@ class PlayerResourcesSchema(BaseModel):
 
 
 class PlayerItemsSchema(BaseModel):
-    inventory_items: list
-    storage_items: list
+    inventory_items: Optional[list] = None
+    storage_items: Optional[list] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -111,3 +113,16 @@ class PlayerInventoryResponseSchema(BaseModel):
     items: list
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlayerMoveSchema(BaseModel):
+    map_id: int
+    map_object_id: int
+
+
+class PlayerMoveResponseSchema(BaseModel):
+    player_id: int
+    new_map_object_id: int
+
+
+

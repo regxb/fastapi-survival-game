@@ -1,25 +1,22 @@
 from sqlalchemy import and_, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.util import map_bits
 
-from app.models import Resource
-from app.models.map_model import (Map, MapObject, MapObjectPosition,
-                                  ResourcesZone)
-from app.repository.base_repository import BaseRepository
+from app.models.map import (Map, MapObject, MapObjectPosition,
+                            ResourcesZone)
+from app.repository.base import BaseRepository
 
-RepositoryMapObject = BaseRepository[MapObject]
-repository_map_object = RepositoryMapObject(MapObject)
+MapObjectRepository = BaseRepository[MapObject]
+map_object_repository = MapObjectRepository(MapObject)
 
-RepositoryMap = BaseRepository[Map]
-repository_map = RepositoryMap(Map)
+MapRepository = BaseRepository[Map]
+map_repository = MapRepository(Map)
 
-RepositoryMapObjectPosition = BaseRepository[MapObjectPosition]
-repository_map_object_position = RepositoryMapObjectPosition(MapObjectPosition)
+MapObjectPositionRepository = BaseRepository[MapObjectPosition]
+map_object_position_repository = MapObjectPositionRepository(MapObjectPosition)
 
-RepositoryResourceZone = BaseRepository[ResourcesZone]
-repository_resource_zone = RepositoryResourceZone(ResourcesZone)
-
-RepositoryResource = BaseRepository[Resource]
-repository_resource = RepositoryResource(Resource)
+ResourceZoneRepository = BaseRepository[ResourcesZone]
+resource_zone_repository = ResourceZoneRepository(ResourcesZone)
 
 
 async def check_placement_on_map(

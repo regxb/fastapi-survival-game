@@ -1,7 +1,9 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base_model import Base
+from app.models.base import Base
+from app.models.resource import Resource
+from app.models.farm import FarmMode
 
 
 class Map(Base):
@@ -25,7 +27,7 @@ class MapObject(Base):
 
     map: Mapped["Map"] = relationship("Map", back_populates="map_objects")
     position: Mapped["MapObjectPosition"] = relationship("MapObjectPosition", back_populates="map_object")
-    players: Mapped[list["Player"]] = relationship("Player", back_populates="map_object", uselist=True)
+    players: Mapped[list["Player"]] = relationship("Player", back_populates="map_object", uselist=True)  # type: ignore
     resource_zone: Mapped["ResourcesZone"] = relationship("ResourcesZone", back_populates="map_object")
 
 

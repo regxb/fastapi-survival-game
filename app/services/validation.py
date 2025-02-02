@@ -3,9 +3,10 @@ from typing import TypeVar, Type
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.gameplay_model import FarmMode, Item
-from app.models.player_model import Player, PlayerResources, PlayerResourcesStorage
-from app.services.map_service import MapService
+from app.models.item import Item
+from app.models import FarmMode
+from app.models.player import Player, PlayerResources, PlayerResourcesStorage
+from app.services.map import MapService
 
 ModelType = TypeVar("ModelType")
 

@@ -3,7 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.gameplay import FarmModeLevelSchema, ResourceSchema
+from app.schemas.resource import ResourceSchema
+from app.schemas.farm import FarmModeLevelSchema
 
 
 class ObjectType(Enum):

@@ -46,7 +46,7 @@ class BaseRepository(Generic[ModelType]):
     async def get(
             self,
             session: AsyncSession,
-            options: Optional[Sequence] = None,
+            options: Sequence | None = None,
             *args,
             **kwargs
     ) -> ModelType:
