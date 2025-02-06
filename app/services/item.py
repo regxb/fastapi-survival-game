@@ -5,9 +5,9 @@ from sqlalchemy.orm import joinedload
 from app.models import Player, Item, ItemRecipe, Inventory
 from app.repository import player_repository, item_repository
 from app.schemas import ItemResponseSchema, RecipeSchema, ResourceCountSchema, CraftItemSchema, ItemSchemaResponse
-from app.services.validation import ValidationService
 from app.services.base import BaseService
 from app.services.player import PlayerResponseService, PlayerService
+from app.services.validation import ValidationService
 
 
 class ItemService:
@@ -38,13 +38,24 @@ class ItemService:
                 can_craft=ValidationService.does_user_have_enough_resources(item.recipe, player.resources),
                 icon=item.icon,
                 recipe=RecipeSchema(
-                    resources=[ResourceCountSchema(id=recipe.resource.id, name=recipe.resource.name, count=recipe.resource_quantity, icon=recipe.resource.icon) for recipe in item.recipe]
+                    resources=[ResourceCountSchema(id=recipe.resource.id, name=recipe.resource.name,
+                                                   count=recipe.resource_quantity, icon=recipe.resource.icon) for recipe
+                               in item.recipe]
                 ),
             )
             for item in items
         ]
 
         return response
+
+    async def add(self, player, item_id: int, count: int = 1):
+        existing_item = next((inv for inv in player.inventory if inv.item_id == item_id), None)
+
+        if existing_item:
+            existing_item.count += count
+        else:
+            new_inventory_item = Inventory(player_id=player.id, item_id=item_id, count=count)
+            self.session.add(new_inventory_item)
 
     async def craft(self, telegram_id: int, craft_data: CraftItemSchema) -> list[ItemSchemaResponse]:
         player = await player_repository.get(
@@ -71,8 +82,8 @@ class ItemService:
                 player.resources, recipe.resource_id, recipe.resource_quantity, "decrease"
             )
 
-        player_inventory = Inventory(player_id=player.id, item_id=item.id)
-        self.session.add(player_inventory)
+        await self.add(player, item.id)
+
         await BaseService.commit_or_rollback(self.session)
         await self.session.refresh(player)
 

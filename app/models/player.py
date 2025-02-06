@@ -1,19 +1,20 @@
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import BIGINT
 
 from app.models.base import Base
+from app.models.farm import FarmSession
+from app.models.item import Item
 from app.models.map import MapObject
 from app.models.resource import Resource
-from app.models.item import Item
-from app.models.farm import FarmSession
 
 
 class Player(Base):
     __tablename__ = 'players'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    player_id: Mapped[int]
-    name: Mapped[str]
+    player_id: Mapped[int] = mapped_column(BIGINT)
+    name: Mapped[str] = mapped_column(default='Player')
     health: Mapped[int] = mapped_column(default=100)
     energy: Mapped[int] = mapped_column(default=100)
     resource_multiplier: Mapped[int] = mapped_column(default=1)
@@ -51,6 +52,7 @@ class Inventory(Base):
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     tier: Mapped[int] = mapped_column(default=1)
+    count: Mapped[int] = mapped_column(default=1)
 
     item: Mapped["Item"] = relationship("Item")
 
@@ -90,5 +92,6 @@ class PlayerItemStorage(Base):
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
+    count: Mapped[int] = mapped_column(default=1)
 
     item: Mapped["Item"] = relationship("Item")

@@ -81,7 +81,7 @@ class PlayerCreateSchema(BaseModel):
 
 class PlayerDBCreateSchema(PlayerCreateSchema):
     player_id: int
-    name: str
+    name: Optional[str] = None
 
 
 class PlayerBaseCreateSchema(BaseModel):
@@ -123,6 +123,3 @@ class PlayerMoveSchema(BaseModel):
 class PlayerMoveResponseSchema(BaseModel):
     player_id: int
     new_map_object_id: int
-
-
-

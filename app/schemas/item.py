@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.resource import ResourceCountSchema
@@ -8,6 +10,7 @@ class ItemSchema(BaseModel):
     name: str
     tier: int
     icon: str
+    count: Optional[int]
 
 
 class ItemSchemaResponse(ItemSchema):

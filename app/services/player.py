@@ -134,7 +134,8 @@ class PlayerResponseService:
                 name=item.item.name,
                 tier=item.tier,
                 icon=item.item.icon,
-                active_item=False
+                active_item=False,
+                count=item.count,
             )
             for item in inventory
         ]
