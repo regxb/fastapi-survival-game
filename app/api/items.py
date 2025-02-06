@@ -6,8 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
-from app.schemas.item import ItemSchemaResponse, CraftItemSchema, ItemResponseSchema
+from app.schemas import PlayerItemsSchema, PlayerTransferItemSchema
+from app.schemas.item import (CraftItemSchema, ItemResponseSchema,
+                              ItemSchemaResponse)
 from app.services.item import ItemService
+from app.services.player_base import StorageService
 
 router = APIRouter(prefix="/items",tags=["Items"])
 
@@ -28,3 +31,12 @@ async def craft_item(
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
     return await ItemService(session).craft(user.id, craft_data)
+
+
+@router.patch("/transfer/items/", response_model=PlayerItemsSchema)
+async def transfer_item(
+        transfer_data: PlayerTransferItemSchema,
+        user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
+        session: Annotated[AsyncSession, Depends(get_async_session)]
+):
+    return await StorageService(session).transfer_items(user.id, transfer_data)

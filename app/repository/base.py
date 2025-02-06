@@ -1,8 +1,8 @@
-from typing import Generic, Optional, Sequence, Type, TypeVar, Dict, Any
+from typing import Any, Dict, Generic, Optional, Sequence, Type, TypeVar
 
 from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, update, and_
+from sqlalchemy import and_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 

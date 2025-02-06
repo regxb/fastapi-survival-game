@@ -3,15 +3,17 @@ from faststream import TestApp
 from faststream.redis import RedisBroker
 from httpx import ASGITransport, AsyncClient
 from pytest_asyncio import is_async_test
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
+                                    create_async_engine)
 from starlette.testclient import TestClient
 
 from app.broker.main import app as faststream_app
 from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.main import app
-from app.models import (BuildingCost, FarmMode, Map, MapObject,
-                        MapObjectPosition, Resource, ResourcesZone, Player, PlayerResources, PlayerBase, Inventory,
-                        Item, ItemRecipe, PlayerItemStorage)
+from app.models import (BuildingCost, FarmMode, Inventory, Item, ItemRecipe,
+                        Map, MapObject, MapObjectPosition, Player, PlayerBase,
+                        PlayerItemStorage, PlayerResources, Resource,
+                        ResourcesZone)
 from app.models.base import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)

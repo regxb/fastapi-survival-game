@@ -2,8 +2,7 @@ from sqlalchemy import and_, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.util import map_bits
 
-from app.models.map import (Map, MapObject, MapObjectPosition,
-                            ResourcesZone)
+from app.models.map import Map, MapObject, MapObjectPosition, ResourcesZone
 from app.repository.base import BaseRepository
 
 MapObjectRepository = BaseRepository[MapObject]

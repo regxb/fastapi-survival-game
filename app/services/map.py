@@ -2,10 +2,10 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.map import Map, MapObject, ResourcesZone, MapObjectPosition
-from app.repository.map import (map_repository,
-                                map_object_repository,
-                                map_object_position_repository, check_placement_on_map)
+from app.models.map import Map, MapObject, MapObjectPosition, ResourcesZone
+from app.repository.map import (check_placement_on_map,
+                                map_object_position_repository,
+                                map_object_repository, map_repository)
 from app.schemas.map import (BaseMapSchema, MapObjectCreateSchema,
                              MapObjectPositionSchema, MapResponseSchema)
 
