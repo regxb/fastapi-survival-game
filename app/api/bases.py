@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
 from app.schemas import PlayerItemsSchema, PlayerTransferItemSchema
-from app.schemas.building import BuildingType, BuildingCostSchema
+from app.schemas.building import BuildingType, BuildingCostResponseSchema
 from app.schemas.player import PlayerBaseSchema, PlayerBaseCreateSchema, PlayerResourcesSchema, \
     PlayerTransferResourceSchema
 from app.services.player_base import PlayerBaseService, BuildingService
@@ -15,7 +15,7 @@ from app.services.player_base import PlayerBaseService, BuildingService
 router = APIRouter(prefix="/bases",tags=["Bases"])
 
 
-@router.get("/cost/", response_model=BuildingCostSchema)
+@router.get("/cost/", response_model=BuildingCostResponseSchema)
 async def get_cost_for_building_base(
         map_id: int,
         building_type: BuildingType,

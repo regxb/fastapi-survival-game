@@ -2,16 +2,14 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import Player, PlayerResources, PlayerBase, BuildingCost, MapObject
+from app.models import Player, PlayerResources, PlayerBase, BuildingCost
 from app.models.player import PlayerResourcesStorage, PlayerItemStorage, Inventory
-from app.repository import player_repository, building_cost_repository, player_base_repository, \
-    player_resource_repository
+from app.repository import player_repository, building_cost_repository
 from app.repository.resource import repository_resource
 from app.repository.player import player_resources_storage_repository, player_base_repository, \
     player_resource_repository, player_item_storage_repository, inventory_repository
-from app.schemas import InventoryItemCreateSchema, StorageItemCreateSchema, PlayerBaseCreateSchema, \
-    PlayerBaseCreateDBSchema, BuildingCostSchema
-from app.schemas.building import BuildingCostSchema
+from app.schemas import InventoryItemCreateSchema, StorageItemCreateSchema
+from app.schemas.building import BuildingCostSchema, BuildingCostResponseSchema
 from app.schemas.player import PlayerTransferResourceSchema, PlayerResourcesStorageCreate, PlayerBaseCreateDBSchema, \
     PlayerBaseCreateSchema, PlayerResourcesSchema, PlayerTransferItemSchema, PlayerItemsSchema, PlayerBaseSchema
 from app.services.map import MapService
@@ -205,7 +203,7 @@ class BuildingService:
             items=player_base.items
         )
 
-    async def get_cost(self, building_type: str, telegram_id: int, map_id: int) -> BuildingCostSchema:
+    async def get_cost(self, building_type: str, telegram_id: int, map_id: int) -> BuildingCostResponseSchema:
         costs = await building_cost_repository.get_multi(
             self.session,
             options=[joinedload(BuildingCost.resource)],
@@ -222,5 +220,5 @@ class BuildingService:
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         can_build = ValidationService.does_user_have_enough_resources(costs, player.resources)
-        resources = {cost.resource.name: cost.resource_quantity for cost in costs}
-        return BuildingCostSchema(can_build=can_build, resources=resources)
+        resources = [BuildingCostSchema.model_validate(model) for model in costs]
+        return BuildingCostResponseSchema(can_build=can_build, resources=resources)

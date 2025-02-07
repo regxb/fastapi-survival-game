@@ -1,6 +1,8 @@
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+from app.schemas.resource import ResourceSchema
 
 
 class BuildingType(Enum):
@@ -8,9 +10,12 @@ class BuildingType(Enum):
 
 
 class BuildingCostSchema(BaseModel):
-    resources: dict[str, int]
-    can_build: bool
+    resource: ResourceSchema
+    resource_quantity: int
+    id: int
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BuildingCostResponseSchema(BaseModel):
     resources: list[BuildingCostSchema]
+    can_build: bool
