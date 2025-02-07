@@ -246,7 +246,6 @@ class BuildingService:
         if await player_base_repository.get(self.session, owner_id=player.id, map_id=map_id):
             raise HTTPException(status_code=400, detail="Player already has a base on this map")
 
-    async def get_cost(self, building_type: str, telegram_id: int, map_id: int) -> BuildingCostSchema:
     async def get_cost(self, building_type: str, telegram_id: int, map_id: int) -> BuildingCostResponseSchema:
         costs = await building_cost_repository.get_multi(
             self.session,
