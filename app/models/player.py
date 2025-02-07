@@ -53,6 +53,7 @@ class Inventory(Base):
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     tier: Mapped[int] = mapped_column(default=1)
     count: Mapped[int] = mapped_column(default=1)
+    active: Mapped[bool] = mapped_column(default=False)
 
     item: Mapped["Item"] = relationship("Item")
 

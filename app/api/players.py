@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
-from app.schemas.player import BasePlayerSchema, PlayerCreateSchema, PlayerSchema, PlayerMoveSchema, \
-    PlayerMoveResponseSchema
+from app.schemas.player import (BasePlayerSchema, PlayerCreateSchema,
+                                PlayerMoveResponseSchema, PlayerMoveSchema,
+                                PlayerSchema)
 from app.services.player import PlayerService
 
 router = APIRouter(prefix="/players", tags=["Players"])

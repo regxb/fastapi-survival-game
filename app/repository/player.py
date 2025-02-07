@@ -1,5 +1,5 @@
 from app.models import Inventory, Player, PlayerBase, PlayerResources
-from app.models.player import PlayerResourcesStorage, PlayerItemStorage
+from app.models.player import PlayerItemStorage, PlayerResourcesStorage
 from app.repository.base import BaseRepository
 
 PlayerRepository = BaseRepository[Player]

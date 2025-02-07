@@ -7,9 +7,9 @@ Create Date: 2025-01-15 14:57:05.727866
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '7eff3741a673'
@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.alter_column('players_resources_storage', 'player_id',
                existing_type=sa.INTEGER(),
                nullable=True)
-    from sqlalchemy.sql import table, column, update
+    from sqlalchemy.sql import column, table, update
     players_resources_storage = table(
         'players_resources_storage',
         column('player_id', sa.Integer())

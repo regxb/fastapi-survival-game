@@ -1,8 +1,9 @@
 from faststream import FastStream
 from faststream.redis import RedisBroker
 
+from app.broker.scheduler_tasks.regenerate_energy import \
+    router as regenerate_energy_router
 from app.broker.task import router
-from app.broker.scheduler_tasks.regenerate_energy import router as regenerate_energy_router
 from app.core.config import REDIS_URL
 
 broker = RedisBroker(REDIS_URL)
@@ -16,8 +17,8 @@ from taskiq_faststream import BrokerWrapper
 taskiq_broker = BrokerWrapper(broker)
 
 
-from taskiq_faststream import StreamScheduler
 from taskiq.schedule_sources import LabelScheduleSource
+from taskiq_faststream import StreamScheduler
 
 taskiq_broker.task(
     message={},

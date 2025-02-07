@@ -2,9 +2,10 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import Player, Item, ItemRecipe, Inventory
-from app.repository import player_repository, item_repository
-from app.schemas import ItemResponseSchema, RecipeSchema, ResourceCountSchema, CraftItemSchema, ItemSchemaResponse
+from app.models import Inventory, Item, ItemRecipe, Player
+from app.repository import item_repository, player_repository
+from app.schemas import (CraftItemSchema, ItemResponseSchema,
+                         ItemSchemaResponse, RecipeSchema, ResourceCountSchema)
 from app.services.base import BaseService
 from app.services.player import PlayerResponseService, PlayerService
 from app.services.validation import ValidationService
@@ -38,9 +39,14 @@ class ItemService:
                 can_craft=ValidationService.does_user_have_enough_resources(item.recipe, player.resources),
                 icon=item.icon,
                 recipe=RecipeSchema(
-                    resources=[ResourceCountSchema(id=recipe.resource.id, name=recipe.resource.name,
-                                                   count=recipe.resource_quantity, icon=recipe.resource.icon) for recipe
-                               in item.recipe]
+                    resources=[
+                        ResourceCountSchema(
+                            id=recipe.resource.id,
+                            name=recipe.resource.name,
+                            count=recipe.resource_quantity,
+                            icon=recipe.resource.icon
+                        ) for recipe in item.recipe
+                    ]
                 ),
             )
             for item in items
@@ -57,7 +63,7 @@ class ItemService:
             new_inventory_item = Inventory(player_id=player.id, item_id=item_id, count=count)
             self.session.add(new_inventory_item)
 
-    async def craft(self, telegram_id: int, craft_data: CraftItemSchema) -> list[ItemSchemaResponse]:
+    async def craft(self, telegram_id: int, craft_data: CraftItemSchema) -> list[ItemSchemaResponse] | None:
         player = await player_repository.get(
             self.session,
             options=[
@@ -88,3 +94,4 @@ class ItemService:
         await self.session.refresh(player)
 
         return PlayerResponseService.serialize_inventory(player.inventory)
+

@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from aiogram.utils.web_app import WebAppUser
-from fastapi import Depends, APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
@@ -11,6 +11,11 @@ from app.schemas.building import BuildingType, BuildingCostResponseSchema
 from app.schemas.player import PlayerBaseSchema, PlayerBaseCreateSchema, PlayerResourcesSchema, \
     PlayerTransferResourceSchema
 from app.services.player_base import PlayerBaseService, BuildingService
+from app.schemas.building import BuildingCostSchema, BuildingType
+from app.schemas.player import (PlayerBaseCreateSchema, PlayerBaseSchema,
+                                PlayerResourcesSchema,
+                                PlayerTransferResourceSchema)
+from app.services.player_base import BuildingService, StorageService
 
 router = APIRouter(prefix="/bases",tags=["Bases"])
 
@@ -40,13 +45,13 @@ async def transfer_resources(
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await PlayerBaseService(session).transfer_resources(user.id, transfer_data)
+    return await StorageService(session).transfer_resources(user.id, transfer_data)
 
 
-@router.patch("/transfer/items/", response_model=PlayerItemsSchema)
+@router.patch("/transfer/items/")
 async def transfer_item(
         transfer_data: PlayerTransferItemSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await PlayerBaseService(session).transfer_items(user.id, transfer_data)
+    return await StorageService(session).transfer_items(user.id, transfer_data)

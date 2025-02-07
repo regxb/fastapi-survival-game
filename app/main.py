@@ -9,12 +9,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.bases import router as bases_router
 from app.api.items import router as items_router
-from app.api.resources import router as resources_router
 from app.api.maps import router as maps_router
 from app.api.players import router as players_router
+from app.api.resources import router as resources_router
+from app.broker.main import broker
 from app.core.config import BOT_TOKEN, DEV
 from app.depends.deps import check_auth
-from app.broker.main import broker
 
 
 @asynccontextmanager

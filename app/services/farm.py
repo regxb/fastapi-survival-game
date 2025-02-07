@@ -7,11 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.broker.main import broker
-from app.models import Player, MapObject, ResourcesZone, Resource
-from app.repository import player_repository, farm_mode_repository, farm_session_repository
-from app.schemas import FarmResourcesSchema, FarmSessionSchema, FarmSessionCreateSchema
-from app.services.validation import ValidationService
+from app.models import MapObject, Player, Resource, ResourcesZone
+from app.repository import (farm_mode_repository, farm_session_repository,
+                            player_repository)
+from app.schemas import (FarmResourcesSchema, FarmSessionCreateSchema,
+                         FarmSessionSchema)
 from app.services.base import BaseService
+from app.services.validation import ValidationService
 
 
 class FarmingService:

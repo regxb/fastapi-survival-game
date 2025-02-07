@@ -1,10 +1,11 @@
-from typing import TypeVar, Type
+from typing import Type, TypeVar
 
 from fastapi import HTTPException
+from sqlalchemy import Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.item import Item
 from app.models import FarmMode
+from app.models.item import Item
 from app.models.player import Player, PlayerResources, PlayerResourcesStorage
 from app.services.map import MapService
 
@@ -14,7 +15,10 @@ ModelType = TypeVar("ModelType")
 class ValidationService:
 
     @staticmethod
-    def does_user_have_enough_resources(costs: list[Type[ModelType]], player_resources: list[PlayerResources]) -> bool:
+    def does_user_have_enough_resources(
+            costs: Sequence[Type[ModelType]],
+            player_resources: Sequence[PlayerResources]
+    ) -> bool:
         if not player_resources:
             return False
         player_resource_dict = {res.resource_id: res.resource_quantity for res in player_resources}
@@ -91,3 +95,4 @@ class ValidationService:
             raise HTTPException(status_code=404, detail="Item not found")
         if not ValidationService.does_user_have_enough_resources(item.recipe, player.resources):
             raise HTTPException(status_code=400, detail="Not enough resources")
+

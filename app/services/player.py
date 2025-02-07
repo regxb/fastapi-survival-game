@@ -1,15 +1,19 @@
 import datetime
-from typing import Optional, List
+from typing import List, Optional
 
 from aiogram.utils.web_app import WebAppUser
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import Inventory, Player, PlayerResources, PlayerBase, PlayerItemStorage
+from app.models import (Inventory, Player, PlayerBase, PlayerItemStorage,
+                        PlayerResources)
 from app.repository import farm_session_repository, player_repository
-from app.schemas import PlayerDBCreateSchema, PlayerCreateSchema, PlayerSchema, BasePlayerSchema, FarmSessionSchema, \
-    ResourceCountSchema, PlayerBaseSchema, ItemSchema, ItemSchemaResponse, PlayerMoveSchema, PlayerMoveResponseSchema
+from app.schemas import (BasePlayerSchema, FarmSessionSchema, ItemSchema,
+                         ItemSchemaResponse, PlayerBaseSchema,
+                         PlayerCreateSchema, PlayerDBCreateSchema,
+                         PlayerMoveResponseSchema, PlayerMoveSchema,
+                         PlayerSchema, ResourceCountSchema)
 from app.services.validation import ValidationService
 
 
@@ -123,22 +127,28 @@ class PlayerResponseService:
 
     @staticmethod
     def serialize_storage_items(items: list[PlayerItemStorage]):
-        items =[ItemSchema(item_id=item.id, name=item.item.name, tier=item.tier, icon=item.item.icon) for item in items]
+        items =[
+            ItemSchema(
+                item_id=item.id,
+                name=item.item.name,
+                tier=item.tier,
+                icon=item.item.icon,
+                count=item.count
+            ) for item in items  if item.count > 0]
         return items or None
 
     @staticmethod
     def serialize_inventory(inventory) -> Optional[List[ItemSchemaResponse]]:
         items = [
             ItemSchemaResponse(
-                item_id=item.id,
+                item_id=item.item_id,
                 name=item.item.name,
                 tier=item.tier,
                 icon=item.item.icon,
-                active_item=False,
+                active_item=item.active,
                 count=item.count,
             )
-            for item in inventory
-        ]
+            for item in inventory if item.count > 0]
         return items or None
 
     @staticmethod
