@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
-from app.schemas.farm import FarmResourcesSchema, FarmSessionSchema
-from app.schemas.resource import ResourceSchema
+from app.schemas import PlayerResourcesSchema, TransferResourceSchema, ResourceSchema, FarmSessionSchema, \
+    FarmResourcesSchema
 from app.services import FarmingService
+from app.services.resource import ResourceTransferService
 
 router = APIRouter(prefix="/resources", tags=["Resources"])
 
@@ -25,3 +26,12 @@ async def farm_resources(
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
     return await FarmingService(session).start_farming(farm_data, user.id)
+
+
+@router.patch("/transfer/", response_model=PlayerResourcesSchema)
+async def transfer_resources(
+        transfer_data: TransferResourceSchema,
+        user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
+        session: Annotated[AsyncSession, Depends(get_async_session)]
+):
+    return await ResourceTransferService(session).transfer(user.id, transfer_data)

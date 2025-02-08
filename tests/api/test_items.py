@@ -57,3 +57,45 @@ async def test_craft_item_not_exist_item(client, db_session, player_with_resourc
     assert response.status_code == 404
     response_json = response.json()
     assert response_json["detail"] == "Item not found"
+
+
+@pytest.mark.asyncio
+async def test_transfer_item_to_storage(client, db_session, player_with_items, player_base):
+    response = await client.patch("/items/transfer/", json={
+        "map_id": 1,
+        "item_id": 1,
+        "direction": "to_storage"
+    })
+    assert response.status_code == 200
+    response_json = response.json()
+    assert response_json["inventory_items"] is None
+    assert len(response_json["storage_items"]) == 1
+    assert response_json["storage_items"][0]["name"] == "test_name"
+    assert response_json["storage_items"][0]["tier"] == 1
+
+
+@pytest.mark.asyncio
+async def test_transfer_item_from_storage(client, db_session, player_base_storage_with_items):
+    response = await client.patch("/items/transfer/", json={
+        "map_id": 1,
+        "item_id": 1,
+        "direction": "from_storage"
+    })
+    assert response.status_code == 200
+    response_json = response.json()
+    assert len(response_json["inventory_items"]) == 1
+    assert response_json["storage_items"] is None
+    assert response_json["inventory_items"][0]["name"] == "test_name"
+    assert response_json["inventory_items"][0]["tier"] == 1
+
+
+@pytest.mark.asyncio
+async def test_transfer_non_exist_item_to_storage(client, db_session, player_with_items, player_base):
+    response = await client.patch("/items/transfer/", json={
+        "map_id": 1,
+        "item_id": 11,
+        "direction": "from_storage"
+    })
+    assert response.status_code == 404
+    response_json = response.json()
+    assert response_json["detail"] == "Item not found"

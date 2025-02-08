@@ -52,7 +52,7 @@ class Inventory(Base):
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     tier: Mapped[int] = mapped_column(default=1)
-    count: Mapped[int] = mapped_column(default=1)
+    # count: Mapped[int] = mapped_column(default=1)
     active: Mapped[bool] = mapped_column(default=False)
 
     item: Mapped["Item"] = relationship("Item")
@@ -93,6 +93,6 @@ class PlayerItemStorage(Base):
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
-    count: Mapped[int] = mapped_column(default=1)
+    # count: Mapped[int] = mapped_column(default=1)
 
     item: Mapped["Item"] = relationship("Item")

@@ -12,7 +12,6 @@ class BuildingType(Enum):
 class BuildingCostSchema(BaseModel):
     resource: ResourceSchema
     resource_quantity: int
-    id: int
     model_config = ConfigDict(from_attributes=True)
 
 

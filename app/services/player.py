@@ -129,26 +129,24 @@ class PlayerResponseService:
     def serialize_storage_items(items: list[PlayerItemStorage]):
         items =[
             ItemSchema(
-                item_id=item.id,
+                id=item.id,
                 name=item.item.name,
                 tier=item.tier,
                 icon=item.item.icon,
-                count=item.count
-            ) for item in items  if item.count > 0]
+            ) for item in items]
         return items or None
 
     @staticmethod
     def serialize_inventory(inventory) -> Optional[List[ItemSchemaResponse]]:
         items = [
             ItemSchemaResponse(
-                item_id=item.item_id,
+                id=item.id,
                 name=item.item.name,
                 tier=item.tier,
                 icon=item.item.icon,
                 active_item=item.active,
-                count=item.count,
             )
-            for item in inventory if item.count > 0]
+            for item in inventory]
         return items or None
 
     @staticmethod

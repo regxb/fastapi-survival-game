@@ -14,11 +14,6 @@ class PlayerStatus(Enum):
     TRAVELING = "traveling"
 
 
-class TransferDirection(Enum):
-    TO_STORAGE = "to_storage"
-    FROM_STORAGE = "from_storage"
-
-
 class PlayerBaseCreateDBSchema(BaseModel):
     map_object_id: int
     map_id: int
@@ -90,23 +85,10 @@ class PlayerBaseCreateSchema(BaseModel):
     map_id: int
 
 
-class PlayerResourcesStorageCreate(BaseModel):
+class ResourcesStorageCreate(BaseModel):
     player_base_id: int
     resource_id: int
     player_id: int
-
-
-class PlayerTransferResourceSchema(BaseModel):
-    map_id: int
-    resource_id: int
-    count: int = Field(ge=1)
-    direction: TransferDirection
-
-
-class PlayerTransferItemSchema(BaseModel):
-    map_id: int
-    item_id: int
-    direction: TransferDirection
 
 
 class PlayerInventoryResponseSchema(BaseModel):

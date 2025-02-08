@@ -6,13 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
-from app.schemas import PlayerItemsSchema, PlayerTransferItemSchema
-from app.schemas.item import (CraftItemSchema, ItemResponseSchema,
-                              ItemSchemaResponse)
-from app.services.item import ItemService
-from app.services.player_base import StorageService
+from app.schemas import ItemResponseSchema, ItemSchemaResponse, CraftItemSchema, PlayerItemsSchema, \
+    TransferItemSchema, EquipItemSchema
+from app.services.item import ItemService, ItemTransferService, ItemEquipService
 
-router = APIRouter(prefix="/items",tags=["Items"])
+router = APIRouter(prefix="/items", tags=["Items"])
 
 
 @router.get("/recipes/", response_model=list[ItemResponseSchema])
@@ -33,10 +31,29 @@ async def craft_item(
     return await ItemService(session).craft(user.id, craft_data)
 
 
-@router.patch("/transfer/items/", response_model=PlayerItemsSchema)
+@router.patch("/transfer/", response_model=PlayerItemsSchema)
 async def transfer_item(
-        transfer_data: PlayerTransferItemSchema,
+        transfer_data: TransferItemSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await StorageService(session).transfer_items(user.id, transfer_data)
+    return await ItemTransferService(session).transfer(user.id, transfer_data)
+
+
+@router.patch("/equip/")
+async def equip_item(
+        equip_data: EquipItemSchema,
+        user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
+        session: Annotated[AsyncSession, Depends(get_async_session)]
+):
+    return await ItemEquipService(session).equip(user.id, equip_data)
+
+@router.delete("/inventory/{item_id}/")
+async def delete_item(
+        item_id: int,
+        map_id: int,
+        map: int,
+        user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
+        session: Annotated[AsyncSession, Depends(get_async_session)]
+):
+    return await ItemService(session).delete(user.id, map_id, item_id)

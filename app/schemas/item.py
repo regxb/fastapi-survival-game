@@ -2,20 +2,21 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict,Field
 
+from app.schemas.base import TransferDirection
 from app.schemas.resource import ResourceCountSchema
 
 
 class ItemSchema(BaseModel):
-    item_id: int = Field(alias="id")
+    id: int
     name: str
     tier: int
     icon: str
-    count: Optional[int]
 
     model_config = ConfigDict(populate_by_name=True)
 
 
 class ItemSchemaResponse(ItemSchema):
+    id: int
     active_item: bool = False
 
 
@@ -51,3 +52,14 @@ class StorageItemCreateSchema(BaseModel):
     player_id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TransferItemSchema(BaseModel):
+    map_id: int
+    item_id: int
+    direction: TransferDirection
+
+
+class EquipItemSchema(BaseModel):
+    map_id: int
+    item_id: int

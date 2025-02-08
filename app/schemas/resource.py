@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.base import TransferDirection
 
 
 class ResourceSchema(BaseModel):
@@ -10,3 +12,10 @@ class ResourceSchema(BaseModel):
 
 class ResourceCountSchema(ResourceSchema):
     count: int
+
+
+class TransferResourceSchema(BaseModel):
+    map_id: int
+    resource_id: int
+    count: int = Field(ge=1)
+    direction: TransferDirection
