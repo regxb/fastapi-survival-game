@@ -1,20 +1,29 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict,Field
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.base import TransferDirection
 from app.schemas.resource import ResourceCountSchema
 
+
 class ItemLocation(Enum):
     inventory = "inventory"
     storage = "storage"
+
+
+class ItemTypeSchema(BaseModel):
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ItemSchema(BaseModel):
     id: int
     name: str
     tier: int
     icon: str
+    type: Optional[str]
 
     model_config = ConfigDict(populate_by_name=True)
 

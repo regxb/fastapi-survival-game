@@ -11,8 +11,17 @@ class Item(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     icon: Mapped[str]
+    type_id: Mapped[int] = mapped_column(ForeignKey('item_types.id'))
 
     recipe: Mapped[list["ItemRecipe"]] = relationship("ItemRecipe", uselist=True)
+    type: Mapped["ItemType"] = relationship("ItemType")
+
+
+class ItemType(Base):
+    __tablename__ = 'item_types'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
 
 
 class ItemRecipe(Base):

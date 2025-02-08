@@ -61,7 +61,7 @@ class ItemService:
     async def delete(self, telegram_id: int, map_id: int, item_id: int, item_location: ItemLocation):
         player = await player_repository.get(
             self.session,
-            options=[joinedload(Player.inventory).joinedload(Inventory.item)],
+            options=[joinedload(Player.inventory).joinedload(Inventory.item).joinedload(Item.type)],
             player_id=telegram_id,
             map_id=map_id
         )
@@ -83,7 +83,7 @@ class ItemService:
             options=[
                 joinedload(Player.resources),
                 joinedload(Player.base).joinedload(PlayerBase.items),
-                joinedload(Player.inventory).joinedload(Inventory.item)
+                joinedload(Player.inventory).joinedload(Inventory.item).joinedload(Item.type)
             ],
             player_id=telegram_id,
             map_id=craft_data.map_id
@@ -124,8 +124,8 @@ class ItemTransferService(BaseTransferService):
         player = await player_repository.get(
             self.session,
             options=[
-                joinedload(Player.inventory).joinedload(Inventory.item),
-                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item),
+                joinedload(Player.inventory).joinedload(Inventory.item).joinedload(Item.type),
+                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item).joinedload(Item.type),
             ],
             player_id=telegram_id,
             map_id=map_id

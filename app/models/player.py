@@ -93,6 +93,5 @@ class PlayerItemStorage(Base):
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
-    # count: Mapped[int] = mapped_column(default=1)
 
     item: Mapped["Item"] = relationship("Item")

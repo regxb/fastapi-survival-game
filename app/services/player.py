@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models import (Inventory, Player, PlayerBase, PlayerItemStorage,
-                        PlayerResources)
+                        PlayerResources, Item)
 from app.repository import farm_session_repository, player_repository
 from app.schemas import (BasePlayerSchema, FarmSessionSchema, ItemSchema,
                          ItemSchemaResponse, PlayerBaseSchema,
@@ -40,8 +40,8 @@ class PlayerService:
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
                 joinedload(Player.base).joinedload(PlayerBase.resources),
-                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item),
-                joinedload(Player.inventory).joinedload(Inventory.item)
+                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item).joinedload(Item.type),
+                joinedload(Player.inventory).joinedload(Inventory.item).joinedload(Item.type)
             ],
             map_id=map_id,
             player_id=telegram_id
@@ -133,6 +133,7 @@ class PlayerResponseService:
                 name=item.item.name,
                 tier=item.tier,
                 icon=item.item.icon,
+                type=item.item.type.name,
             ) for item in items]
         return items or None
 
@@ -145,6 +146,7 @@ class PlayerResponseService:
                 tier=item.tier,
                 icon=item.item.icon,
                 active_item=item.active,
+                type=item.item.type.name
             )
             for item in inventory]
         return items or None
