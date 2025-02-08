@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_async_session
 from app.depends.deps import get_user_data_from_request
 from app.schemas import ItemResponseSchema, ItemSchemaResponse, CraftItemSchema, PlayerItemsSchema, \
-    TransferItemSchema, EquipItemSchema
+    TransferItemSchema, EquipItemSchema, ItemLocation
 from app.services.item import ItemService, ItemTransferService, ItemEquipService
 
 router = APIRouter(prefix="/items", tags=["Items"])
@@ -48,12 +48,13 @@ async def equip_item(
 ):
     return await ItemEquipService(session).equip(user.id, equip_data)
 
-@router.delete("/inventory/{item_id}/")
+
+@router.delete("/{item_id}/")
 async def delete_item(
         item_id: int,
         map_id: int,
-        map: int,
+        item_location: ItemLocation,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await ItemService(session).delete(user.id, map_id, item_id)
+    return await ItemService(session).delete(user.id, map_id, item_id, item_location)

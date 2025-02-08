@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict,Field
@@ -5,6 +6,9 @@ from pydantic import BaseModel, ConfigDict,Field
 from app.schemas.base import TransferDirection
 from app.schemas.resource import ResourceCountSchema
 
+class ItemLocation(Enum):
+    inventory = "inventory"
+    storage = "storage"
 
 class ItemSchema(BaseModel):
     id: int

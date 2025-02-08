@@ -8,7 +8,8 @@ from app.models import Inventory, Item, ItemRecipe, Player, PlayerBase, PlayerIt
 from app.repository import item_repository, player_repository, inventory_repository, player_item_storage_repository
 from app.schemas import (CraftItemSchema, ItemResponseSchema,
                          ItemSchemaResponse, RecipeSchema, ResourceCountSchema, TransferItemSchema,
-                         PlayerItemsSchema, StorageItemCreateSchema, InventoryItemCreateSchema, EquipItemSchema)
+                         PlayerItemsSchema, StorageItemCreateSchema, InventoryItemCreateSchema, EquipItemSchema,
+                         ItemLocation)
 from app.services.base import BaseService, BaseTransferService
 from app.services.player import PlayerResponseService, PlayerService
 from app.services.validation import ValidationService
@@ -57,7 +58,7 @@ class ItemService:
 
         return response
 
-    async def delete(self, telegram_id: int, map_id: int, item_id: int):
+    async def delete(self, telegram_id: int, map_id: int, item_id: int, item_location: ItemLocation):
         player = await player_repository.get(
             self.session,
             options=[joinedload(Player.inventory).joinedload(Inventory.item)],
@@ -66,7 +67,10 @@ class ItemService:
         )
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
-        item = await inventory_repository.get(self.session, id=item_id, player_id=player.id)
+        if item_location.value == "inventory":
+            item = await inventory_repository.get(self.session, id=item_id, player_id=player.id)
+        elif item_location.value == "storage":
+            item = await player_item_storage_repository.get(self.session, id=item_id, player_id=player.id)
         if not item:
             raise HTTPException(status_code=404, detail="Item not found")
         await self.session.delete(item)
