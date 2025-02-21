@@ -58,3 +58,4 @@ async def delete_item(
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
     return await ItemService(session).delete(user.id, map_id, item_id, item_location)
+
