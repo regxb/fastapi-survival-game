@@ -20,3 +20,6 @@ DEV = os.environ.get('DEV', 'False') == 'True'
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 REDIS_URL = os.environ.get("REDIS_URL")
+APP_URL = os.environ.get("APP_URL")
+WEB_APP_URL = os.environ.get("WEB_APP_URL")
+TG_SECRET = os.environ.get("TG_SECRET")

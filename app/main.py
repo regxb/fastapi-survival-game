@@ -1,7 +1,6 @@
-import os
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 
-from aiogram.utils.web_app import WebAppInitData, WebAppUser
+from aiogram.utils.web_app import WebAppUser
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,18 +11,25 @@ from app.api.items import router as items_router
 from app.api.maps import router as maps_router
 from app.api.players import router as players_router
 from app.api.resources import router as resources_router
+from app.api.telegram import router as telegram_router
+from app.bot.bot import bot, dp
 from app.broker.main import broker
-from app.core.config import BOT_TOKEN, DEV
+from app.core.config import DEV, APP_URL, TG_SECRET
 from app.depends.deps import check_auth
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await broker.connect()
+    await bot.set_webhook(url=str(APP_URL)+'/telegram',
+                          allowed_updates=dp.resolve_used_update_types(),
+                          drop_pending_updates=True,
+                          secret_token=TG_SECRET)
     try:
         yield
     finally:
         await broker.close()
+
 
 if not DEV:
     app = FastAPI(dependencies=[Depends(check_auth)], lifespan=lifespan)
@@ -35,6 +41,7 @@ app.include_router(players_router)
 app.include_router(bases_router)
 app.include_router(items_router)
 app.include_router(resources_router)
+app.include_router(telegram_router)
 
 
 class UserMiddleware(BaseHTTPMiddleware):
