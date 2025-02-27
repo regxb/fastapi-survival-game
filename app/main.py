@@ -21,7 +21,7 @@ from app.depends.deps import check_auth
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await broker.connect()
-    await bot.set_webhook(url=str(APP_URL)+'/telegram',
+    await bot.set_webhook(url=str(APP_URL) + '/telegram/',
                           allowed_updates=dp.resolve_used_update_types(),
                           drop_pending_updates=True,
                           secret_token=TG_SECRET)
@@ -31,23 +31,20 @@ async def lifespan(app: FastAPI):
         await broker.close()
 
 
-if not DEV:
-    app = FastAPI(dependencies=[Depends(check_auth)], lifespan=lifespan)
-else:
-    app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
-app.include_router(maps_router)
-app.include_router(players_router)
-app.include_router(bases_router)
-app.include_router(items_router)
-app.include_router(resources_router)
-app.include_router(telegram_router)
+app.include_router(router=maps_router, dependencies=[Depends(check_auth)])
+app.include_router(router=players_router, dependencies=[Depends(check_auth)])
+app.include_router(router=bases_router, dependencies=[Depends(check_auth)])
+app.include_router(router=items_router, dependencies=[Depends(check_auth)])
+app.include_router(router=resources_router, dependencies=[Depends(check_auth)])
+app.include_router(router=telegram_router, dependencies=[Depends(check_auth)])
 
 
 class UserMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if not DEV:
-            if request.url.path in ["/docs", "/redoc", "/openapi.json",'/telegram']:
+            if request.url.path in ["/docs", "/redoc", "/openapi.json", '/telegram/']:
                 return await call_next(request)
             token = request.headers.get("Authorization")
             if not token:
