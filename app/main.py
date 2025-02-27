@@ -47,7 +47,7 @@ app.include_router(telegram_router)
 class UserMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if not DEV:
-            if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+            if request.url.path in ["/docs", "/redoc", "/openapi.json",'/telegram']:
                 return await call_next(request)
             token = request.headers.get("Authorization")
             if not token:
