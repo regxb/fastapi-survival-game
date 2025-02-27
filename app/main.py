@@ -38,7 +38,7 @@ app.include_router(router=players_router, dependencies=[Depends(check_auth)])
 app.include_router(router=bases_router, dependencies=[Depends(check_auth)])
 app.include_router(router=items_router, dependencies=[Depends(check_auth)])
 app.include_router(router=resources_router, dependencies=[Depends(check_auth)])
-app.include_router(router=telegram_router, dependencies=[Depends(check_auth)])
+app.include_router(router=telegram_router)
 
 
 class UserMiddleware(BaseHTTPMiddleware):
