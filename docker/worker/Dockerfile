@@ -16,4 +16,4 @@ RUN poetry install --no-root --no-interaction --no-ansi
 
 COPY app/ ./app/
 
-CMD ["poetry", "run", "python", "app/broker/main.py"]
+CMD ["poetry", "run", "python", "-m", "app.broker.main"]
