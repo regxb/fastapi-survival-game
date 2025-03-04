@@ -16,4 +16,4 @@ RUN poetry install --no-root --no-interaction --no-ansi
 
 COPY app/ ./app/
 
-CMD ["poetry", "run", "taskiq", "scheduler", "app.broker.main:scheduler"]
+CMD ["poetry", "run", "python", "app/broker/main.py"]

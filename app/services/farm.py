@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.broker.main import broker
+from app.core.database import redis_client
 from app.models import MapObject, Player, Resource, ResourcesZone
 from app.repository import (farm_mode_repository, farm_session_repository,
                             player_repository)
@@ -74,7 +74,7 @@ class FarmingService:
             "total_energy": current_farm_mode.total_energy,
             "total_resources": current_farm_mode.total_resources,
         }
-        await broker.publish(json.dumps(task_data), "farm_session_task")
+        redis_client.rpush('task_queue', json.dumps(task_data))
 
     async def get_resources(self):
         result = await self.session.execute(select(Resource).order_by(Resource.id))

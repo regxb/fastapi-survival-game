@@ -1,34 +1,48 @@
-from faststream import FastStream
-from faststream.redis import RedisBroker
+import asyncio
+import json
+from datetime import datetime, timedelta
 
-from app.broker.scheduler_tasks.regenerate_energy import \
-    router as regenerate_energy_router
-from app.broker.task import router
-from app.core.config import REDIS_URL
+from apscheduler.jobstores.redis import RedisJobStore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-broker = RedisBroker(REDIS_URL)
-broker.include_router(router)
-broker.include_router(regenerate_energy_router)
-app = FastStream(broker)
+from app.broker.scheduler_tasks.regenerate_energy import regenerate_energy
+from app.broker.task import farm_session_task
+from app.core import config
+from app.core.database import redis_client
+
+jobstores = {
+    'default': RedisJobStore(
+        host=config.REDIS_HOST,
+        port=config.REDIS_PORT,
+        db=config.REDIS_DB,
+        username='default',
+        password=config.REDIS_PASSWORD,
+    )
+}
+
+scheduler = AsyncIOScheduler(jobstores=jobstores)
 
 
-from taskiq_faststream import BrokerWrapper
-
-taskiq_broker = BrokerWrapper(broker)
+scheduler.add_job(regenerate_energy, 'cron', minute='*/5', id='regenerate_energy',replace_existing=True)
 
 
-from taskiq.schedule_sources import LabelScheduleSource
-from taskiq_faststream import StreamScheduler
+async def process_tasks():
 
-taskiq_broker.task(
-    message={},
-    channel="regenerate_energy",
-    schedule=[{
-        "cron": "* * * * *",
-    }],
-)
+    while True:
+        task_data_json = redis_client.lpop('task_queue')
+        if task_data_json:
+            task_data = json.loads(task_data_json)
+            scheduler.add_job(farm_session_task, 'date',
+                              run_date=datetime.now() + timedelta(minutes=task_data['total_minutes']),
+                              kwargs={'task_data': task_data},
+                              misfire_grace_time=None)
+        await asyncio.sleep(1)
 
-scheduler = StreamScheduler(
-    broker=taskiq_broker,
-    sources=[LabelScheduleSource(taskiq_broker)],
-)
+
+async def run_scheduler():
+    scheduler.start()
+    await process_tasks()
+
+
+if __name__ == "__main__":
+    asyncio.run(run_scheduler())

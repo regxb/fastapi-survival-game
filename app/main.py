@@ -13,22 +13,17 @@ from app.api.players import router as players_router
 from app.api.resources import router as resources_router
 from app.api.telegram import router as telegram_router
 from app.bot.bot import bot, dp
-from app.broker.main import broker
 from app.core.config import DEV, APP_URL, TG_SECRET
 from app.depends.deps import check_auth
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await broker.connect()
     await bot.set_webhook(url=str(APP_URL) + '/telegram/',
                           allowed_updates=dp.resolve_used_update_types(),
                           drop_pending_updates=True,
                           secret_token=TG_SECRET)
-    try:
-        yield
-    finally:
-        await broker.close()
+    yield
 
 
 app = FastAPI(lifespan=lifespan)
