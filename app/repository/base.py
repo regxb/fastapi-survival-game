@@ -25,6 +25,13 @@ class BaseRepository(Generic[ModelType]):
             raise HTTPException(status_code=500, detail=str(e.orig))
         return db_obj
 
+    async def delete(self, session: AsyncSession, obj_data: CreateSchemaType) -> None:
+        db_obj = self._model(**obj_data.model_dump())
+        try:
+            await session.delete(db_obj)
+        except IntegrityError as e:
+            raise HTTPException(status_code=500, detail=str(e.orig))
+
     async def get_multi(
             self,
             session: AsyncSession,
@@ -107,7 +114,7 @@ class BaseRepository(Generic[ModelType]):
             if where_clause:
                 conditions = []
                 for key, value in where_clause.items():
-                    if isinstance(value, tuple):  # Если значение — это кортеж (оператор, значение)
+                    if isinstance(value, tuple):
                         operator, val = value
                         if operator == ">":
                             conditions.append(getattr(model, key) > val)
@@ -123,7 +130,7 @@ class BaseRepository(Generic[ModelType]):
                             conditions.append(getattr(model, key) != val)
                         else:
                             raise ValueError(f"Unsupported operator: {operator}")
-                    else:  # Если значение не кортеж, используем оператор "=" по умолчанию
+                    else:
                         conditions.append(getattr(model, key) == value)
 
                 stmt = stmt.where(and_(*conditions))

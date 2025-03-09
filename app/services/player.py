@@ -83,6 +83,19 @@ class PlayerService:
         )
         print(f"Updated {updated_count} rows")
 
+    async def update_health(self):
+        where_clause = {"health": ("<", 100)}
+
+        update_data = {"health": Player.health + 1}
+
+        updated_count = await player_repository.update_multiple(
+            session=self.session,
+            model=Player,
+            obj_in=update_data,
+            where_clause=where_clause,
+        )
+        print(f"Updated {updated_count} rows")
+
     @staticmethod
     def update_resources(
             player_resources: list[PlayerResources], resource_id: int, quantity: int, action: str

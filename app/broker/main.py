@@ -33,7 +33,7 @@ async def process_tasks():
         if task_data_json:
             task_data = json.loads(task_data_json)
             scheduler.add_job(farm_session_task, 'date',
-                              run_date=datetime.now() + timedelta(minutes=task_data['total_minutes']),
+                              run_date=datetime.now() + timedelta(seconds=task_data['total_minutes']),
                               kwargs={'task_data': task_data},
                               misfire_grace_time=None)
         await asyncio.sleep(1)
