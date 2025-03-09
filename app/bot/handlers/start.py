@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 from app.bot.keyboards.inline import web_app
 
@@ -22,7 +22,7 @@ async def start(message: Message) -> None:
 
 
 @router.callback_query(F.data == 'instructions')
-async def instructions(message: Message) -> None:
+async def instructions(call: CallbackQuery) -> None:
     instructions_text = (
         '<b>📖 Инструкция по игре</b>\n\n'
         '<b>1️⃣ Начало:</b> После начала игры вы будете находиться в городе.Вам нужно добыть ресурсы и построить дом.\n\n'
@@ -31,7 +31,7 @@ async def instructions(message: Message) -> None:
         '<b>✨ Совет:</b> Не забывайте следить за состоянием персонажа, чтобы вовремя восстановить его здоровье и энергию! ⚡\n\n'
     )
 
-    await message.answer(
+    await call.message.answer(
         instructions_text,
         reply_markup=web_app(),
         parse_mode="HTML"
