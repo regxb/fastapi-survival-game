@@ -1,3 +1,3 @@
-FROM traefik:v2.9.6
+FROM traefik:v3.3.4
 
 COPY ../docker/traefik/traefik.prod.toml ./etc/traefik/traefik.toml
