@@ -10,11 +10,6 @@
   [entryPoints.websecure]
     address = ":443"
 
-  [entryPoints.web_ipv6]
-    address = "[::]:80"
-  [entryPoints.websecure_ipv6]
-    address = "[::]:443"
-
 [accessLog]
 
 [api]
