@@ -10,8 +10,6 @@ services:
     environment:
       - TZ=UTC
     restart: always
-    networks:
-      - web
 
   uvicorn-app:
     build:
@@ -31,8 +29,6 @@ services:
       - "traefik.http.routers.fastapi.tls=true"
       - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
     restart: always
-    networks:
-      - web
 
   traefik:
     build:
@@ -53,13 +49,5 @@ services:
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${DASHBOARD_USER}"
     restart: always
-    networks:
-      - web
 
-networks:
-  web:
-    enable_ipv6: true
-    ipam:
-      config:
-        - subnet: "${IPV6_SUBNET}"
 
