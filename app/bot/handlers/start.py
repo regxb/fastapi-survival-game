@@ -5,7 +5,9 @@ from aiogram.types import Message, CallbackQuery
 from app.bot.keyboards.inline import web_app
 
 router = Router()
+
 @router.message(CommandStart())
+@router.message()
 async def start(message: Message) -> None:
     description = (
         '<b>🎮 Добро пожаловать в игру!</b>\n\n'
@@ -30,7 +32,7 @@ async def instructions(call: CallbackQuery) -> None:
         '<b>3️⃣ Бои:</b> В момент фарма на вас может напасть зомби и между вами будет бой.🧟‍♂️\n\n'
         '<b>✨ Совет:</b> Не забывайте следить за состоянием персонажа, чтобы вовремя восстановить его здоровье и энергию! ⚡\n\n'
     )
-
+    await call.answer()
     await call.message.answer(
         instructions_text,
         reply_markup=web_app(),

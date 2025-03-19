@@ -10,6 +10,11 @@
   [entryPoints.websecure]
     address = ":443"
 
+  [entryPoints.web_ipv6]
+    address = "[::]:80"
+  [entryPoints.websecure_ipv6]
+    address = "[::]:443"
+
 [accessLog]
 
 [api]
@@ -20,7 +25,7 @@ dashboard = true
     exposedByDefault = false
 
 [certificatesResolvers.letsencrypt.acme]
-  email = "mirash1997@gmai.com"
+  email = "mirash1997@gmail.com"
   storage = "/certificates/acme.json"
   [certificatesResolvers.letsencrypt.acme.httpChallenge]
     entryPoint = "web"

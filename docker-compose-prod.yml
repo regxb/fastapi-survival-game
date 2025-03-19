@@ -1,22 +1,24 @@
 services:
   taskiq-scheduler:
     build:
-      context: ..
+      context: .
       dockerfile: docker/worker/Dockerfile
     env_file:
-      - ../.env
+      - .env
     volumes:
       - ../app:/app/app
     environment:
       - TZ=UTC
     restart: always
+    networks:
+      - web
 
   uvicorn-app:
     build:
-      context: ..
+      context: .
       dockerfile: docker/app/Dockerfile
     env_file:
-      - ../.env
+      - .env
     volumes:
       - ../app:/app/app
     environment:
@@ -29,10 +31,12 @@ services:
       - "traefik.http.routers.fastapi.tls=true"
       - "traefik.http.routers.fastapi.tls.certresolver=letsencrypt"
     restart: always
+    networks:
+      - web
 
   traefik:
     build:
-      context: ..
+      context: .
       dockerfile: docker/traefik/Dockerfile
     ports:
       - "80:80"
@@ -49,3 +53,13 @@ services:
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.users=${DASHBOARD_USER}"
     restart: always
+    networks:
+      - web
+
+networks:
+  web:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: "${IPV6_SUBNET}"
+
