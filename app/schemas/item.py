@@ -52,6 +52,7 @@ class ItemResponseSchema(BaseModel):
 
 class InventoryItemCreateSchema(BaseModel):
     item_id: int
+    count: int
     tier: int
     player_id: int
 
@@ -61,6 +62,7 @@ class InventoryItemCreateSchema(BaseModel):
 class StorageItemCreateSchema(BaseModel):
     player_base_id: int
     item_id: int
+    count: int
     tier: int
     player_id: int
 
@@ -70,6 +72,7 @@ class StorageItemCreateSchema(BaseModel):
 class TransferItemSchema(BaseModel):
     map_id: int
     item_id: int
+    count: int
     direction: TransferDirection
 
 

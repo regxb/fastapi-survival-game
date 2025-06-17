@@ -10,7 +10,8 @@ async def test_get_building_cost(client, db_session, player, building_cost):
         params={
             "building_type": BuildingType.BASE.value,
             "map_id": 1
-        }
+        },
+
     )
 
     assert response.status_code == 200

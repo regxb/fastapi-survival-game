@@ -19,10 +19,10 @@ from app.depends.deps import check_auth
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await bot.set_webhook(url=str(APP_URL) + '/telegram/',
-                          allowed_updates=dp.resolve_used_update_types(),
-                          drop_pending_updates=True,
-                          secret_token=TG_SECRET)
+    # await bot.set_webhook(url=str(APP_URL) + '/telegram/',
+    #                       allowed_updates=dp.resolve_used_update_types(),
+    #                       drop_pending_updates=True,
+    #                       secret_token=TG_SECRET)
     yield
 
 

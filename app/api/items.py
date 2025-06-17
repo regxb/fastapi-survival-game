@@ -22,7 +22,7 @@ async def get_items_recipe(
     return await ItemService(session).get_items(map_id, user.id)
 
 
-@router.patch("/craft/", response_model=list[ItemSchemaResponse])
+@router.patch("/craft/", response_model=list[ItemSchemaResponse] | None)
 async def craft_item(
         craft_data: CraftItemSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],

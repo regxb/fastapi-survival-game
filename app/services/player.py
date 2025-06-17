@@ -40,8 +40,8 @@ class PlayerService:
             options=[
                 joinedload(Player.resources).joinedload(PlayerResources.resource),
                 joinedload(Player.base).joinedload(PlayerBase.resources),
-                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item).joinedload(Item.type),
-                joinedload(Player.inventory).joinedload(Inventory.item).joinedload(Item.type)
+                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item),
+                joinedload(Player.inventory).joinedload(Inventory.item)
             ],
             map_id=map_id,
             player_id=telegram_id
@@ -146,7 +146,7 @@ class PlayerResponseService:
                 name=item.item.name,
                 tier=item.tier,
                 icon=item.item.icon,
-                type=item.item.type.name,
+                type=item.item.type,
             ) for item in items]
         return items or None
 
@@ -159,7 +159,7 @@ class PlayerResponseService:
                 tier=item.tier,
                 icon=item.item.icon,
                 active_item=item.active,
-                type=item.item.type.name
+                type=item.item.type,
             )
             for item in inventory]
         return items or None

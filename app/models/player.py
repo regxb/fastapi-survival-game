@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import BIGINT
 
@@ -52,10 +52,14 @@ class Inventory(Base):
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     tier: Mapped[int] = mapped_column(default=1)
-    # count: Mapped[int] = mapped_column(default=1)
+    count: Mapped[int] = mapped_column(default=1)
     active: Mapped[bool] = mapped_column(default=False)
 
     item: Mapped["Item"] = relationship("Item")
+
+
+    def __repr__(self):
+        return f"<Inventory(id={self.id}, item={self.item.name}, count={self.count})>"
 
 
 class PlayerBase(Base):
@@ -91,6 +95,7 @@ class PlayerItemStorage(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tier: Mapped[int] = mapped_column(default=1)
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
+    count: Mapped[int] = mapped_column(default=1)
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
 

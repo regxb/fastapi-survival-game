@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -7,21 +7,17 @@ from app.models.resource import Resource
 
 class Item(Base):
     __tablename__ = 'items'
+    __table_args__ = (
+        CheckConstraint("max_count >= 0", name="ck_max_count_positive"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     icon: Mapped[str]
-    type_id: Mapped[int] = mapped_column(ForeignKey('item_types.id'))
+    max_count: Mapped[int]
+    type: Mapped[str]
 
     recipe: Mapped[list["ItemRecipe"]] = relationship("ItemRecipe", uselist=True)
-    type: Mapped["ItemType"] = relationship("ItemType")
-
-
-class ItemType(Base):
-    __tablename__ = 'item_types'
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
 
 
 class ItemRecipe(Base):

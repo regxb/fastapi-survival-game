@@ -1,13 +1,10 @@
 import pytest
-from faststream import TestApp
-from faststream.redis import RedisBroker
 from httpx import ASGITransport, AsyncClient
 from pytest_asyncio import is_async_test
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
                                     create_async_engine)
 from starlette.testclient import TestClient
 
-from app.broker.main import app as faststream_app
 from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.main import app
 from app.models import (BuildingCost, FarmMode, Inventory, Item, ItemRecipe,
@@ -52,16 +49,16 @@ async def db_session(connection_test):
 async def client(db_session) -> TestClient:
     app.dependency_overrides[get_async_session] = lambda: db_session
     async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test/"
+            transport=ASGITransport(app=app), base_url="http://test/", headers={"authorization": "123"}
     ) as ac:
         yield ac
 
 
-@pytest.fixture
-async def test_broker():
-    broker = RedisBroker()
-    async with TestApp(app=faststream_app):
-        yield broker
+# @pytest.fixture
+# async def test_broker():
+#     broker = RedisBroker()
+#     async with TestApp(app=faststream_app):
+#         yield broker
 
 
 # database fixture

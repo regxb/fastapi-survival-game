@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import FarmMode
+from app.models import FarmMode, Inventory
 from app.models.item import Item
 from app.models.player import Player, PlayerResources, PlayerResourcesStorage
 from app.services.map import MapService
@@ -13,6 +13,19 @@ ModelType = TypeVar("ModelType")
 
 
 class ValidationService:
+
+    @staticmethod
+    def does_player_have_empty_slot(player: Player, craft_item: Item) -> bool:
+        for item in player.inventory:
+            if item.item_id == craft_item.id and item.count < craft_item.max_count:
+                # print(1)
+                return True
+        if player.inventory_slots > len(player.inventory):
+            # print(2)
+            return True
+        # print(3)
+        return False
+
 
     @staticmethod
     def does_user_have_enough_resources(
@@ -95,4 +108,6 @@ class ValidationService:
             raise HTTPException(status_code=404, detail="Item not found")
         if not ValidationService.does_user_have_enough_resources(item.recipe, player.resources):
             raise HTTPException(status_code=400, detail="Not enough resources")
+        if not ValidationService.does_player_have_empty_slot(player, item):
+            raise HTTPException(status_code=400, detail="Inventory is full")
 
