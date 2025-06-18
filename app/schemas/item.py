@@ -48,7 +48,6 @@ class ItemResponseSchema(BaseModel):
     name: str
     can_craft: bool
     icon: str
-    count: int
     recipe: RecipeSchema
 
 
