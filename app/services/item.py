@@ -146,7 +146,7 @@ class ItemService:
         self._update_inventory_items(player, item)
 
         await BaseService.commit_or_rollback(self.session)
-        await self.session.refresh(player)
+        # await self.session.refresh(player)
 
         return PlayerResponseService.serialize_inventory(player.inventory)
 
@@ -178,7 +178,7 @@ class ItemTransferService(BaseTransferService):
         await self._update_items(player, transfer_data.item_id, transfer_data.direction.value, transfer_data.count)
         await BaseService.commit_or_rollback(self.session)
         await self.session.refresh(player)
-        return await ItemService.serialize_player_items(player)
+        return ItemService.serialize_player_items(player)
 
     async def _get_player_with_items(self, telegram_id: int, map_id: int) -> Player:
         player = await player_repository.get(

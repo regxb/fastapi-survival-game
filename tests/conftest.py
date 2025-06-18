@@ -100,6 +100,7 @@ async def resources_zone(db_session, resources):
     wood_resource_zone = ResourcesZone(map_object_id=2, resource_id=1, map_id=1)
     db_session.add(wood_resource_zone)
     await db_session.commit()
+    return wood_resource_zone
 
 
 @pytest.fixture
@@ -113,12 +114,12 @@ async def farming_mode(db_session, resources_zone):
 
 @pytest.fixture
 async def building_cost(db_session, resources):
-    building_cost = BuildingCost(type="base", resource_id=1, resource_quantity=10)
-    db_session.add(building_cost)
-    building_cost = BuildingCost(type="base", resource_id=2, resource_quantity=20)
-    db_session.add(building_cost)
-
+    building_cost1 = BuildingCost(type="base", resource_id=1, resource_quantity=10)
+    db_session.add(building_cost1)
+    building_cost2 = BuildingCost(type="base", resource_id=2, resource_quantity=20)
+    db_session.add(building_cost2)
     await db_session.commit()
+    return [building_cost1, building_cost2]
 
 
 @pytest.fixture
@@ -126,44 +127,50 @@ async def player(db_session, map_with_objects):
     player = Player(map_id=1, player_id=111, name="test_name")
     db_session.add(player)
     await db_session.commit()
+    return player
 
 
 @pytest.fixture
 async def player_resources(db_session, player, resources):
-    player_resources = PlayerResources(player_id=1, resource_id=1, resource_quantity=10)
-    db_session.add(player_resources)
-    player_resources = PlayerResources(player_id=1, resource_id=2, resource_quantity=20)
-    db_session.add(player_resources)
+    player_resources1 = PlayerResources(player_id=1, resource_id=1, resource_quantity=10)
+    db_session.add(player_resources1)
+    player_resources2 = PlayerResources(player_id=1, resource_id=2, resource_quantity=20)
+    db_session.add(player_resources2)
     await db_session.commit()
+    return [player_resources1, player_resources2]
 
 @pytest.fixture
 async def map_(db_session):
     map_ = Map(height=333, width=333)
     db_session.add(map_)
     await db_session.commit()
+    return map_
 
 @pytest.fixture
 async def player_base(db_session, player, map_):
     player_base = PlayerBase(map_object_id=1, map_id=1, owner_id=1)
     db_session.add(player_base)
     await db_session.commit()
+    return player_base
 
 @pytest.fixture
 async def player_outside_base(db_session, player, map_):
     player_base = PlayerBase(map_object_id=2, map_id=1, owner_id=1)
     db_session.add(player_base)
     await db_session.commit()
+    return player_base
 
 @pytest.fixture
 async def player_with_items(db_session, player, item):
-    inventory = Inventory(player_id=1, item_id=1, tier=1)
+    inventory = Inventory(player_id=1, item_id=1, tier=1, count=1)
     db_session.add(inventory)
     await db_session.commit()
+    return inventory
 
 
 @pytest.fixture
 async def item(db_session):
-    item = Item(name="test_name", icon="icon.svg")
+    item = Item(name="test_name", icon="icon.svg", max_count=1, type="test")
     db_session.add(item)
     await db_session.commit()
 
@@ -173,6 +180,7 @@ async def items_recipe(db_session, item, resources):
     item_recipe = ItemRecipe(item_id=1, resource_id=1, resource_quantity=5)
     db_session.add(item_recipe)
     await db_session.commit()
+    # return item_recipe
 
 
 @pytest.fixture
@@ -180,6 +188,7 @@ async def player_base_storage_with_items(db_session, player_base, item):
     item_storage = PlayerItemStorage(item_id=1, player_id=1, player_base_id=1)
     db_session.add(item_storage)
     await db_session.commit()
+    return item_storage
 
 
 @pytest.fixture

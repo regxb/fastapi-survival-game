@@ -17,12 +17,8 @@ class BaseRepository(Generic[ModelType]):
 
     async def create(self, session: AsyncSession, obj_data: CreateSchemaType) -> ModelType:
         db_obj = self._model(**obj_data.model_dump())
-        try:
-            session.add(db_obj)
-            await session.commit()
-            await session.refresh(db_obj)
-        except IntegrityError as e:
-            raise HTTPException(status_code=500, detail=str(e.orig))
+        session.add(db_obj)
+        await session.flush()
         return db_obj
 
     async def delete(self, session: AsyncSession, obj_data: CreateSchemaType) -> None:
@@ -87,13 +83,13 @@ class BaseRepository(Generic[ModelType]):
             for field in obj_data:
                 if field in update_data:
                     setattr(db_obj, field, update_data[field])
-            try:
-                session.add(db_obj)
-                await session.commit()
-            except IntegrityError as e:
-                await session.rollback()
-                raise HTTPException(status_code=500, detail=str(e.orig))
-        await session.refresh(db_obj)
+        #     try:
+        #         session.add(db_obj)
+        #         await session.commit()
+        #     except IntegrityError as e:
+        #         await session.rollback()
+        #         raise HTTPException(status_code=500, detail=str(e.orig))
+        # await session.refresh(db_obj)
         return db_obj
 
     @staticmethod

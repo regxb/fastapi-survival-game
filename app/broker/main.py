@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from apscheduler.jobstores.redis import RedisJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.broker.scheduler_tasks.regenerate_energy import regenerate_energy
+from app.broker.scheduler_tasks.regenerate_energy import regenerate_energy, farming_resources
 from app.broker.task import farm_session_task
 from app.core import config
 from app.core.database import redis_client
@@ -15,19 +15,16 @@ jobstores = {
         host=config.REDIS_HOST,
         port=config.REDIS_PORT,
         db=config.REDIS_DB,
-        username='default',
-        password=config.REDIS_PASSWORD,
     )
 }
 
 scheduler = AsyncIOScheduler(jobstores=jobstores)
 
-
-scheduler.add_job(regenerate_energy, 'cron', minute='*/5', id='regenerate_energy',replace_existing=True)
+scheduler.add_job(regenerate_energy, 'interval', seconds=60, id='regenerate_energy', replace_existing=True)
+scheduler.add_job(farming_resources, 'interval', seconds=60, id='farming_resources', replace_existing=True)
 
 
 async def process_tasks():
-
     while True:
         task_data_json = redis_client.lpop('task_queue')
         if task_data_json:

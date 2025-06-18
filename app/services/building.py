@@ -2,11 +2,10 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import Player, PlayerBase, BuildingCost
+from app.models import Player, BuildingCost
 from app.repository import player_repository, building_cost_repository
 from app.repository.player import player_base_repository, \
     player_resource_repository
-from app.schemas import ResourceSchema
 from app.schemas.building import BuildingCostResponseSchema, BuildingCostSchema
 from app.schemas.player import PlayerBaseCreateDBSchema, \
     PlayerBaseCreateSchema, PlayerBaseSchema
@@ -46,21 +45,14 @@ class BuildingService:
                 owner_id=player.id
             )
         )
-
         self._update_resources_after_building(building_costs, player_resources)
 
         await BaseService.commit_or_rollback(self.session)
 
-        player_base = await player_base_repository.get(
-            self.session,
-            options=[joinedload(PlayerBase.resources), joinedload(PlayerBase.items)],
-            id=new_player_base.id,
-        )
-
         return PlayerBaseSchema(
             map_object_id=new_map_object.id,
-            resources=player_base.resources,
-            items=player_base.items
+            resources=new_player_base.resources,
+            items=new_player_base.items
         )
 
     def _update_resources_after_building(self, building_costs, player_resources):
@@ -71,6 +63,9 @@ class BuildingService:
 
     async def _add_object_on_map(self, object_data: PlayerBaseCreateSchema, player_name: str):
         new_map_object = await self.map_service.create_player_base_map_object(player_name, object_data.map_id)
+        self.session.add(new_map_object)
+        await self.session.flush()
+        await self.session.refresh(new_map_object)
         await MapObjectService(self.session).add_position(
             object_data.x1,
             object_data.y1,
@@ -78,7 +73,6 @@ class BuildingService:
             object_data.y1 + 1,
             new_map_object.id
         )
-
         return new_map_object
 
     async def _validate_map_area(self, object_data: PlayerBaseCreateSchema) -> None:

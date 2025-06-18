@@ -42,7 +42,7 @@ class ValidationService:
 
     @staticmethod
     def can_player_do_something(player: Player) -> None:
-        if player.status != "waiting":
+        if player.status != "waiting" and player.status != "recovery":
             raise HTTPException(status_code=400, detail="The player is currently doing some action")
         if not player or player.map_id is None:
             raise HTTPException(status_code=404, detail="Player is not on the map")
@@ -61,8 +61,8 @@ class ValidationService:
             raise HTTPException(status_code=400, detail="Can't farm in this area")
 
     @staticmethod
-    def can_player_start_farming(player_energy: int, farm_mode: FarmMode) -> None:
-        player_energy -= farm_mode.total_energy
+    def can_player_start_farming(player_energy: int, total_minutes: int) -> None:
+        player_energy -= total_minutes
         if player_energy < 0:
             raise HTTPException(status_code=400, detail="Not enough energy to start farming")
 

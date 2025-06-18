@@ -8,6 +8,7 @@ from app.repository.map import (check_placement_on_map,
                                 map_object_repository, map_repository)
 from app.schemas.map import (BaseMapSchema, MapObjectCreateSchema,
                              MapObjectPositionSchema, MapResponseSchema)
+from app.services.base import BaseService
 
 
 class MapService:

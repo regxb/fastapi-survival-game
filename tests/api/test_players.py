@@ -48,9 +48,7 @@ async def test_create_player_on_non_exist_map(client, map_with_objects, player):
 @pytest.mark.asyncio
 async def test_move_player_on_non_exist_object(client, db_session, map_with_objects, player):
     response = await client.patch("/players/move/", json={"map_id": 1, "map_object_id": 22})
-    assert response.status_code == 500
-    response_json = response.json()
-    assert "asyncpg.exceptions.ForeignKeyViolationError" in response_json["detail"]
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

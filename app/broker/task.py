@@ -43,16 +43,8 @@ async def success_farm(session, farm_session: FarmSession, task_data: dict):
         player_id=farm_session.player_id,
         resource_id=farm_session.resource_id
     )
-    if not player_resource:
-        player_resource = PlayerResources(player_id=farm_session.player_id,
-                                          resource_id=farm_session.resource_id, )
-        session.add(player_resource)
-        await session.flush()
-    resource_new_count = task_data["total_resources"] + random.randint(1, 10)
-    player_resource.resource_quantity += resource_new_count
-
+    resource_new_count = player_resource.resource_quantity - task_data["resources_before_farming"]
     resource = await repository_resource.get(session, id=player_resource.resource_id)
-
     message = (f'<b>✨ Фарм завершён успешно! ✨</b>\n\n\n'
                f'<b>🧑🏻‍🎤Персонаж</b> успешно завершил фарм и добыл ресурсы:\n'
                f'<b>{resource.icon}{resource.name}</b> - {resource_new_count}')

@@ -32,9 +32,12 @@ class FarmModeSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FarmResourcesSchema(BaseModel):
+class StartFarmResourcesSchema(BaseModel):
     map_id: int
-    mode: FarmModeEnum
+    total_minutes: int
+
+class StopFarmResourcesSchema(BaseModel):
+    map_id: int
 
 
 class FarmSessionCreateSchema(BaseModel):

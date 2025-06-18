@@ -19,3 +19,7 @@ player_item_storage_repository = PlayerItemStorageRepository(PlayerItemStorage)
 
 InventoryRepository = BaseRepository[Inventory]
 inventory_repository = InventoryRepository(Inventory)
+
+
+async def get_players_with_active_farm_session():
+    ...

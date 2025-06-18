@@ -1,5 +1,7 @@
 import pytest
 
+from app.repository import player_item_storage_repository
+
 
 @pytest.mark.asyncio
 async def test_get_items_recipe(client, db_session, player_with_resources, items_recipe):
@@ -64,11 +66,17 @@ async def test_transfer_item_to_storage(client, db_session, player_with_items, p
     response = await client.patch("/items/transfer/", json={
         "map_id": 1,
         "item_id": 1,
+        "count": 1,
         "direction": "to_storage"
     })
     assert response.status_code == 200
     response_json = response.json()
     assert response_json["inventory_items"] is None
+    storage_items = await player_item_storage_repository.get(
+        db_session,
+        player_id=player_with_items.id,
+    )
+    assert len(storage_items) == 1
     assert len(response_json["storage_items"]) == 1
     assert response_json["storage_items"][0]["name"] == "test_name"
     assert response_json["storage_items"][0]["tier"] == 1
@@ -79,6 +87,7 @@ async def test_transfer_item_from_storage(client, db_session, player_base_storag
     response = await client.patch("/items/transfer/", json={
         "map_id": 1,
         "item_id": 1,
+        "count": 1,
         "direction": "from_storage"
     })
     assert response.status_code == 200
@@ -94,6 +103,7 @@ async def test_transfer_non_exist_item_to_storage(client, db_session, player_wit
     response = await client.patch("/items/transfer/", json={
         "map_id": 1,
         "item_id": 11,
+        "count": 1,
         "direction": "from_storage"
     })
     assert response.status_code == 404

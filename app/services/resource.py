@@ -25,11 +25,14 @@ class ResourceTransferService(BaseTransferService):
             transfer_data.direction.value
         )
 
-        self._update_resources(transfer_data.direction.value, transfer_data.count, player, resource.id, base_storage)
+        self._update_resources(transfer_data.direction.value, transfer_data.count, player, resource.id,
+                                     base_storage)
+
         await BaseService.commit_or_rollback(self.session)
+
         await self.session.refresh(player)
 
-        return await self._serialize_player_resources(player)
+        return self._serialize_player_resources(player)
 
     async def _get_player_with_resources(self, telegram_id: int, map_id: int) -> Player:
         player = await player_repository.get(
@@ -63,6 +66,8 @@ class ResourceTransferService(BaseTransferService):
                     player_id=player.id
                 )
             )
+
+
         return base_storage
 
     def _validate_resource_transfer(self, player: Player, base_storage: PlayerResourcesStorage, resource_id: int,
@@ -70,7 +75,7 @@ class ResourceTransferService(BaseTransferService):
         ValidationService.can_player_transfer_resources(player, base_storage, resource_id, count, direction)
 
     def _update_resources(self, direction: str, count: int, player: Player, resource_id: int,
-                          base_storage: PlayerResourcesStorage) -> None:
+                                base_storage: PlayerResourcesStorage) -> None:
         if direction == "to_storage":
             base_storage.resource_quantity += count
             PlayerService(self.session).update_resources(player.resources, resource_id, count, "decrease")
@@ -78,7 +83,7 @@ class ResourceTransferService(BaseTransferService):
             base_storage.resource_quantity -= count
             PlayerService(self.session).update_resources(player.resources, resource_id, count, "increase")
 
-    async def _serialize_player_resources(self, player: Player) -> PlayerResourcesSchema:
+    def _serialize_player_resources(self, player: Player) -> PlayerResourcesSchema:
         player_resources = PlayerResponseService.serialize_resources(player.resources)
         storage_resources = PlayerResponseService.serialize_resources(player.base.resources)
         return PlayerResourcesSchema(player_resources=player_resources, storage_resources=storage_resources)

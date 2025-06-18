@@ -3,17 +3,19 @@ from typing import List, Optional
 
 from aiogram.utils.web_app import WebAppUser
 from fastapi import HTTPException
+from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models import (Inventory, Player, PlayerBase, PlayerItemStorage,
-                        PlayerResources, Item)
-from app.repository import farm_session_repository, player_repository
+                        PlayerResources, FarmSession)
+from app.repository import farm_session_repository, player_repository, player_resource_repository, map_object_repository
 from app.schemas import (BasePlayerSchema, FarmSessionSchema, ItemSchema,
                          ItemSchemaResponse, PlayerBaseSchema,
                          PlayerCreateSchema, PlayerDBCreateSchema,
                          PlayerMoveResponseSchema, PlayerMoveSchema,
                          PlayerSchema, ResourceCountSchema)
+from app.services.base import BaseService
 from app.services.validation import ValidationService
 
 
@@ -24,6 +26,7 @@ class PlayerService:
     async def create(self, user: WebAppUser, player_data: PlayerCreateSchema) -> PlayerSchema:
         obj_data = PlayerDBCreateSchema(player_id=user.id, name=user.username, map_id=player_data.map_id)
         player = await player_repository.create(self.session, obj_data)
+        await BaseService.commit_or_rollback(self.session)
         return PlayerSchema(in_base=False, **player.__dict__)
 
     async def get_players(self, telegram_id: int) -> list[BasePlayerSchema]:
@@ -58,20 +61,33 @@ class PlayerService:
         return PlayerResponseService.get_player_response(player, farm_session)
 
     async def move(self, telegram_id: int, player_data: PlayerMoveSchema) -> PlayerMoveResponseSchema:
-        player = await player_repository.get(self.session, map_id=player_data.map_id, player_id=telegram_id)
+        player = await player_repository.get(
+            self.session,
+            map_id=player_data.map_id,
+            player_id=telegram_id,
+            options=[joinedload(Player.base)]
+        )
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
+        map_object = await map_object_repository.get_by_id(self.session, id=player_data.map_object_id)
+        if not map_object:
+            raise HTTPException(status_code=404, detail="Map object not found")
         ValidationService.can_player_do_something(player)
         if player.map_object_id == player_data.map_object_id:
             raise HTTPException(status_code=409, detail="The user is already at this place")
+        if player.base and player_data.map_object_id == player.base.map_object_id:
+            player.status = "recovery"
+        else:
+            player.status = "waiting"
 
         new_player_position = await player_repository.update(
             self.session, player_data, player_id=telegram_id, map_id=player_data.map_id
         )
+        await BaseService.commit_or_rollback(self.session)
         return PlayerMoveResponseSchema(new_map_object_id=new_player_position.map_object_id, player_id=player.id)
 
     async def update_energy(self):
-        where_clause = {"energy": ("<", 100)}
+        where_clause = {"energy": ("<", 100), "status": "recovery"}
 
         update_data = {"energy": Player.energy + 1}
 
@@ -84,7 +100,7 @@ class PlayerService:
         print(f"Updated {updated_count} rows")
 
     async def update_health(self):
-        where_clause = {"health": ("<", 100)}
+        where_clause = {"health": ("<", 100), "status": "recovery"}
 
         update_data = {"health": Player.health + 1}
 
@@ -96,9 +112,32 @@ class PlayerService:
         )
         print(f"Updated {updated_count} rows")
 
+    async def add_farming_resources(self):
+        farming_players = await player_repository.get_multi(
+            self.session,
+            status="farming",
+            options=[
+                joinedload(Player.farm_sessions.and_(FarmSession.status=="in_progress")),
+                joinedload(Player.resources),
+                joinedload(Player.farm_sessions)
+            ]
+        )
+        for player in farming_players:
+            farming_resource = player.farm_sessions[0].resource_id
+            resource = next((resource for resource in player.resources if resource.resource_id == farming_resource), None)
+            resource.resource_quantity += 1
+            player.energy -= 1
+            if player.energy <= 0:
+                player.status = "waiting"
+                player.farm_sessions[0].status = "completed"
+            await BaseService.commit_or_rollback(self.session)
+
     @staticmethod
     def update_resources(
-            player_resources: list[PlayerResources], resource_id: int, quantity: int, action: str
+            player_resources: list[PlayerResources],
+            resource_id: int,
+            quantity: int,
+            action: str
     ) -> None:
         for resource in player_resources:
             if resource.resource_id == resource_id:
@@ -140,7 +179,7 @@ class PlayerResponseService:
 
     @staticmethod
     def serialize_storage_items(items: list[PlayerItemStorage]):
-        items =[
+        items = [
             ItemSchema(
                 id=item.id,
                 name=item.item.name,

@@ -10,6 +10,7 @@ class ResourceSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class ResourceCountSchema(ResourceSchema):
     count: int
 
@@ -19,3 +20,11 @@ class TransferResourceSchema(BaseModel):
     resource_id: int
     count: int = Field(ge=1)
     direction: TransferDirection
+
+
+class StopFarmingResourcesSchema(BaseModel):
+    resources: list[ResourceCountSchema]
+    player_energy: int
+    player_health: int
+
+    model_config = ConfigDict(from_attributes=True)
