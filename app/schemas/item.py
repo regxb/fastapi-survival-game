@@ -23,6 +23,7 @@ class ItemSchema(BaseModel):
     name: str
     tier: int
     icon: str
+    count: int
     type: Optional[str]
 
     model_config = ConfigDict(populate_by_name=True)
@@ -47,6 +48,7 @@ class ItemResponseSchema(BaseModel):
     name: str
     can_craft: bool
     icon: str
+    count: int
     recipe: RecipeSchema
 
 

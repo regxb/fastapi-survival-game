@@ -52,11 +52,12 @@ async def equip_item(
 @router.delete("/{item_id}/")
 async def delete_item(
         item_id: int,
+        count: int,
         map_id: int,
         item_location: ItemLocation,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await ItemService(session).delete(user.id, map_id, item_id, item_location)
+    return await ItemService(session).delete(user.id, map_id, item_id, count, item_location)
 
 

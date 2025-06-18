@@ -92,24 +92,32 @@ class ItemService:
 
         return response
 
-    async def delete(self, telegram_id: int, map_id: int, item_id: int, item_location: ItemLocation):
+    async def delete(self, telegram_id: int, map_id: int, item_id: int, count: int, item_location: ItemLocation):
         player = await player_repository.get(
             self.session,
-            options=[joinedload(Player.inventory).joinedload(Inventory.item).joinedload(Item.type)],
+            options=[joinedload(Player.inventory).joinedload(Inventory.item),
+                     joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item)],
             player_id=telegram_id,
             map_id=map_id
         )
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         if item_location.value == "inventory":
-            item = await inventory_repository.get(self.session, id=item_id, player_id=player.id)
+            repository = inventory_repository
         elif item_location.value == "storage":
-            item = await player_item_storage_repository.get(self.session, id=item_id, player_id=player.id)
+            repository = player_item_storage_repository
+        item = await repository.get(self.session, id=item_id, player_id=player.id)
         if not item:
             raise HTTPException(status_code=404, detail="Item not found")
-        await self.session.delete(item)
+        if count > item.count:
+            raise HTTPException(status_code=404, detail="Not enough items")
+        if item.count == count:
+            await self.session.delete(item)
+        else:
+            item.count -= count
         await BaseService.commit_or_rollback(self.session)
-        return PlayerResponseService.serialize_inventory(player.inventory)
+        await self.session.refresh(player)
+        return self.serialize_player_items(player)
 
     async def craft(self, telegram_id: int, craft_data: CraftItemSchema) -> list[ItemSchemaResponse] | None:
         player = await player_repository.get(
@@ -156,6 +164,12 @@ class ItemService:
             player_inventory = Inventory(player_id=player.id, item_id=item.id)
             self.session.add(player_inventory)
 
+    @staticmethod
+    def serialize_player_items(player: Player) -> PlayerItemsSchema:
+        storage_items = PlayerResponseService.serialize_storage_items(player.base.items)
+        inventory_items = PlayerResponseService.serialize_inventory(player.inventory)
+        return PlayerItemsSchema(storage_items=storage_items, inventory_items=inventory_items)
+
 
 class ItemTransferService(BaseTransferService):
     async def transfer(self, telegram_id: int, transfer_data: TransferItemSchema) -> PlayerItemsSchema:
@@ -164,7 +178,7 @@ class ItemTransferService(BaseTransferService):
         await self._update_items(player, transfer_data.item_id, transfer_data.direction.value, transfer_data.count)
         await BaseService.commit_or_rollback(self.session)
         await self.session.refresh(player)
-        return await self._serialize_player_items(player)
+        return await ItemService.serialize_player_items(player)
 
     async def _get_player_with_items(self, telegram_id: int, map_id: int) -> Player:
         player = await player_repository.get(
@@ -229,11 +243,6 @@ class ItemTransferService(BaseTransferService):
             raise HTTPException(status_code=404, detail="Item not found")
         if count > item.count:
             raise HTTPException(status_code=404, detail="Player not have enough items")
-
-    async def _serialize_player_items(self, player: Player) -> PlayerItemsSchema:
-        storage_items = PlayerResponseService.serialize_storage_items(player.base.items)
-        inventory_items = PlayerResponseService.serialize_inventory(player.inventory)
-        return PlayerItemsSchema(storage_items=storage_items, inventory_items=inventory_items)
 
 
 class ItemEquipService(BaseService):

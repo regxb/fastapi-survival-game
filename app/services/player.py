@@ -147,6 +147,7 @@ class PlayerResponseService:
                 tier=item.tier,
                 icon=item.item.icon,
                 type=item.item.type,
+                count=item.count,
             ) for item in items]
         return items or None
 
@@ -160,6 +161,7 @@ class PlayerResponseService:
                 icon=item.item.icon,
                 active_item=item.active,
                 type=item.item.type,
+                count=item.count,
             )
             for item in inventory]
         return items or None
