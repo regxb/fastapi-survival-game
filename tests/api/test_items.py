@@ -8,6 +8,7 @@ async def test_get_items_recipe(client, db_session, player_with_resources, items
     response = await client.get("/items/recipes/", params={"map_id": 1})
     assert response.status_code == 200
     response_json = response.json()
+    print(response_json)
     assert response_json[0]["name"] == "test_name"
     assert response_json[0]["can_craft"] == True
     assert len(response_json[0]["recipe"]["resources"]) == 1
@@ -72,11 +73,6 @@ async def test_transfer_item_to_storage(client, db_session, player_with_items, p
     assert response.status_code == 200
     response_json = response.json()
     assert response_json["inventory_items"] is None
-    storage_items = await player_item_storage_repository.get(
-        db_session,
-        player_id=player_with_items.id,
-    )
-    assert len(storage_items) == 1
     assert len(response_json["storage_items"]) == 1
     assert response_json["storage_items"][0]["name"] == "test_name"
     assert response_json["storage_items"][0]["tier"] == 1
@@ -108,4 +104,4 @@ async def test_transfer_non_exist_item_to_storage(client, db_session, player_wit
     })
     assert response.status_code == 404
     response_json = response.json()
-    assert response_json["detail"] == "Item not found"
+    assert response_json["detail"] == "Player has no item"

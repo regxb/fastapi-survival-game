@@ -25,10 +25,10 @@ class Player(Base):
     map_object_id: Mapped[int] = mapped_column(ForeignKey('map_objects.id'), default=1)
 
     map_object: Mapped["MapObject"] = relationship("MapObject", back_populates="players")
-    resources: Mapped[list["PlayerResources"]] = relationship("PlayerResources", uselist=True)
+    resources: Mapped[list["PlayerResources"]] = relationship("PlayerResources", uselist=True, lazy="joined")
     farm_sessions: Mapped[list["FarmSession"]] = relationship("FarmSession", uselist=True)
-    base: Mapped["PlayerBase"] = relationship("PlayerBase", back_populates="player")
-    inventory: Mapped[list["Inventory"]] = relationship("Inventory", uselist=True)
+    base: Mapped["PlayerBase"] = relationship("PlayerBase", back_populates="player", lazy="joined")
+    inventory: Mapped[list["Inventory"]] = relationship("Inventory", uselist=True, lazy="joined")
 
     __table_args__ = (UniqueConstraint('player_id', 'map_id', name='idx_uniq_player_id'),)
 
@@ -55,7 +55,7 @@ class Inventory(Base):
     count: Mapped[int] = mapped_column(default=1)
     active: Mapped[bool] = mapped_column(default=False)
 
-    item: Mapped["Item"] = relationship("Item")
+    item: Mapped["Item"] = relationship("Item", lazy="joined")
 
 
     def __repr__(self):
@@ -73,8 +73,8 @@ class PlayerBase(Base):
 
     map_object: Mapped["MapObject"] = relationship("MapObject")
     player: Mapped["Player"] = relationship("Player", back_populates="base")
-    resources: Mapped[list["PlayerResourcesStorage"]] = relationship("PlayerResourcesStorage", uselist=True)
-    items: Mapped[list["PlayerItemStorage"]] = relationship("PlayerItemStorage", uselist=True)
+    resources: Mapped[list["PlayerResourcesStorage"]] = relationship("PlayerResourcesStorage", uselist=True, lazy="joined")
+    items: Mapped[list["PlayerItemStorage"]] = relationship("PlayerItemStorage", uselist=True, lazy="joined")
 
 
 class PlayerResourcesStorage(Base):
@@ -86,7 +86,7 @@ class PlayerResourcesStorage(Base):
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
 
-    resource: Mapped["Resource"] = relationship("Resource")
+    resource: Mapped["Resource"] = relationship("Resource", lazy="joined")
 
 
 class PlayerItemStorage(Base):
@@ -99,4 +99,4 @@ class PlayerItemStorage(Base):
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
 
-    item: Mapped["Item"] = relationship("Item")
+    item: Mapped["Item"] = relationship("Item", lazy="joined")

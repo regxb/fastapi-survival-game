@@ -24,10 +24,10 @@ async def get_cost_for_building_base(
     return await BuildingService(session).get_cost(building_type.value, user.id, map_id)
 
 
-@router.post("/", response_model=PlayerBaseSchema)
+@router.post("/")
 async def build_base(
         object_data: PlayerBaseCreateSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await BuildingService(session).create(user.id, object_data)
+    return await BuildingService(session).create_base(user.id, object_data)

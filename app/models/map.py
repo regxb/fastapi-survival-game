@@ -27,7 +27,7 @@ class MapObject(Base):
 
     map: Mapped["Map"] = relationship("Map", back_populates="map_objects")
     position: Mapped["MapObjectPosition"] = relationship("MapObjectPosition", back_populates="map_object")
-    players: Mapped[list["Player"]] = relationship("Player", back_populates="map_object", uselist=True)  # type: ignore
+    players: Mapped[list["Player"]] = relationship("Player", back_populates="map_object", uselist=True, lazy="joined")  # type: ignore
     resource_zone: Mapped["ResourcesZone"] = relationship("ResourcesZone", back_populates="map_object")
 
 

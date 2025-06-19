@@ -31,7 +31,7 @@ async def craft_item(
     return await ItemService(session).craft(user.id, craft_data)
 
 
-@router.patch("/transfer/", response_model=PlayerItemsSchema)
+@router.patch("/transfer/")
 async def transfer_item(
         transfer_data: TransferItemSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],

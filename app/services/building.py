@@ -2,10 +2,9 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models import Player, BuildingCost
+from app.models import Player, BuildingCost, MapObject, PlayerBase
 from app.repository import player_repository, building_cost_repository
-from app.repository.player import player_base_repository, \
-    player_resource_repository
+from app.repository.player import player_base_repository
 from app.schemas.building import BuildingCostResponseSchema, BuildingCostSchema
 from app.schemas.player import PlayerBaseCreateDBSchema, \
     PlayerBaseCreateSchema, PlayerBaseSchema
@@ -13,6 +12,7 @@ from app.services.base import BaseService
 from app.services.map import MapObjectService
 from app.services.map import MapService
 from app.services.player import PlayerService
+from app.services.resource import ResourceService
 from app.services.validation import ValidationService
 
 
@@ -22,38 +22,40 @@ class BuildingService:
         self.map_service = MapService(session)
         self.map_object_service = MapObjectService(session)
 
-    async def create(self, telegram_id: int, object_data: PlayerBaseCreateSchema, ) -> PlayerBaseSchema:
-        player = await player_repository.get(self.session, player_id=telegram_id, map_id=object_data.map_id)
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+    async def create_base(self, telegram_id: int, object_data: PlayerBaseCreateSchema, ) -> PlayerBaseSchema:
+        player = await PlayerService.get_player(self.session, telegram_id, object_data.map_id)
         await self._validate_player_base_exists(player, object_data.map_id)
-
         building_costs = await building_cost_repository.get_multi(self.session, type="base")
-        player_resources = await player_resource_repository.get_multi(self.session, player_id=player.id)
+        player_resources = await ResourceService.get_resources(self.session, player.id)
+
         if not ValidationService.does_user_have_enough_resources(building_costs, player_resources):
             raise HTTPException(status_code=400, detail="Not enough resources")
-
         await self._validate_map_area(object_data)
 
         new_map_object = await self._add_object_on_map(object_data, player.name)
-
-        new_player_base = await player_base_repository.create(
-            self.session,
-            PlayerBaseCreateDBSchema(
-                map_object_id=new_map_object.id,
-                map_id=new_map_object.map_id,
-                owner_id=player.id
-            )
-        )
+        new_player_base = await self._create_player_base(player.id, new_map_object)
         self._update_resources_after_building(building_costs, player_resources)
 
         await BaseService.commit_or_rollback(self.session)
+        await self.session.refresh(new_player_base)
+        await self.session.refresh(new_map_object)
 
         return PlayerBaseSchema(
             map_object_id=new_map_object.id,
             resources=new_player_base.resources,
             items=new_player_base.items
         )
+
+    async def _create_player_base(self, player_id: int, map_object: MapObject) -> PlayerBase:
+        new_player_base = await player_base_repository.create(
+            self.session,
+            PlayerBaseCreateDBSchema(
+                map_object_id=map_object.id,
+                map_id=map_object.map_id,
+                owner_id=player_id
+            )
+        )
+        return new_player_base
 
     def _update_resources_after_building(self, building_costs, player_resources):
         for cost in building_costs:
@@ -63,9 +65,6 @@ class BuildingService:
 
     async def _add_object_on_map(self, object_data: PlayerBaseCreateSchema, player_name: str):
         new_map_object = await self.map_service.create_player_base_map_object(player_name, object_data.map_id)
-        self.session.add(new_map_object)
-        await self.session.flush()
-        await self.session.refresh(new_map_object)
         await MapObjectService(self.session).add_position(
             object_data.x1,
             object_data.y1,

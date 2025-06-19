@@ -107,7 +107,6 @@ class FarmingService:
             "resource_id": farm_session.resource_id,
             "resources_before_farming": resources_before_farming.resource_quantity
         }
-        redis_client.hset(f'farm:{farm_session.player_id}', mapping=task_data)
         redis_client.rpush('task_queue', json.dumps(task_data))
 
     async def get_resources(self):

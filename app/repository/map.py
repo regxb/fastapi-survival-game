@@ -34,5 +34,5 @@ async def check_placement_on_map(
         )
     )))
     result = await session.execute(stmt)
-    map_objects = result.scalars().all()
+    map_objects = result.scalar()
     return False if map_objects else True

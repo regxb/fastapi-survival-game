@@ -89,6 +89,7 @@ class ResourcesStorageCreate(BaseModel):
     player_base_id: int
     resource_id: int
     player_id: int
+    resource_quantity: int
 
 
 class PlayerInventoryResponseSchema(BaseModel):

@@ -1,6 +1,7 @@
 import pytest
+from sqlalchemy import select
 
-from app.models import Player
+from app.models import Player, PlayerResourcesStorage
 
 
 # @pytest.mark.asyncio
@@ -34,7 +35,21 @@ async def test_transfer_resources_to_storage(client, db_session, player_resource
     assert response.status_code == 200
     response_json = response.json()
     assert len(response_json["player_resources"]) == 2
-    assert response_json["player_resources"][0]["name"] == "wood"
+    assert response_json["storage_resources"][0]["name"] == "wood"
+
+
+@pytest.mark.asyncio
+async def test_transfer_resources_from_storage(client, db_session, player, player_base_with_resources):
+    response = await client.patch("/resources/transfer/", json={
+        "map_id": 1,
+        "resource_id": 1,
+        "count": 8,
+        "direction": "from_storage"
+    })
+    assert response.status_code == 200
+    response_json = response.json()
+    assert len(response_json["player_resources"]) == 1
+    assert response_json["storage_resources"][0]["name"] == "wood"
 
 
 @pytest.mark.asyncio

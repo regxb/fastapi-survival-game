@@ -10,7 +10,7 @@ from app.main import app
 from app.models import (BuildingCost, FarmMode, Inventory, Item, ItemRecipe,
                         Map, MapObject, MapObjectPosition, Player, PlayerBase,
                         PlayerItemStorage, PlayerResources, Resource,
-                        ResourcesZone)
+                        ResourcesZone, PlayerResourcesStorage)
 from app.models.base import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
@@ -150,6 +150,15 @@ async def map_(db_session):
 async def player_base(db_session, player, map_):
     player_base = PlayerBase(map_object_id=1, map_id=1, owner_id=1)
     db_session.add(player_base)
+    await db_session.commit()
+    return player_base
+
+@pytest.fixture
+async def player_base_with_resources(db_session, player, map_, resources):
+    player_base = PlayerBase(map_object_id=1, map_id=1, owner_id=1)
+    db_session.add(player_base)
+    player_item_storage = PlayerResourcesStorage(resource_id=1, player_base_id=1, player_id=1, resource_quantity=22)
+    db_session.add(player_item_storage)
     await db_session.commit()
     return player_base
 

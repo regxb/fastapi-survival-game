@@ -9,7 +9,8 @@ from sqlalchemy.orm import joinedload
 
 from app.models import (Inventory, Player, PlayerBase, PlayerItemStorage,
                         PlayerResources, FarmSession)
-from app.repository import farm_session_repository, player_repository, player_resource_repository, map_object_repository
+from app.repository import farm_session_repository, player_repository, player_resource_repository, \
+    map_object_repository, map_repository
 from app.schemas import (BasePlayerSchema, FarmSessionSchema, ItemSchema,
                          ItemSchemaResponse, PlayerBaseSchema,
                          PlayerCreateSchema, PlayerDBCreateSchema,
@@ -24,6 +25,9 @@ class PlayerService:
         self.session = session
 
     async def create(self, user: WebAppUser, player_data: PlayerCreateSchema) -> PlayerSchema:
+        map_ = await map_repository.get_by_id(self.session, player_data.map_id)
+        if map_ is None:
+            raise HTTPException(status_code=404, detail="Map not found")
         obj_data = PlayerDBCreateSchema(player_id=user.id, name=user.username, map_id=player_data.map_id)
         player = await player_repository.create(self.session, obj_data)
         await BaseService.commit_or_rollback(self.session)
@@ -145,6 +149,13 @@ class PlayerService:
                     resource.resource_quantity -= quantity
                 if action == "increase":
                     resource.resource_quantity += quantity
+
+    @staticmethod
+    async def get_player(session: AsyncSession, telegram_id: int, map_id: int) -> Player:
+        player = await player_repository.get(session, player_id=telegram_id, map_id=map_id)
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+        return player
 
 
 class PlayerResponseService:
