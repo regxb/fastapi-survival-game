@@ -1,4 +1,4 @@
-from aiogram.types import WebAppInfo, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.core.config import WEB_APP_URL

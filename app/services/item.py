@@ -1,23 +1,34 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Sequence
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
-from app.models import Inventory, Item, ItemRecipe, Player, PlayerBase, PlayerItemStorage
-from app.repository import item_repository, player_repository, inventory_repository, player_item_storage_repository
-from app.schemas import (CraftItemSchema, ItemResponseSchema,
-                         ItemSchemaResponse, RecipeSchema, ResourceCountSchema, TransferItemSchema,
-                         PlayerItemsSchema, StorageItemCreateSchema, InventoryItemCreateSchema, EquipItemSchema,
-                         ItemLocation)
+from app.models import Inventory, Item, Player, PlayerItemStorage, EquipItem, ItemStat
+from app.repository import (create_inventory_item, create_player_inventory,
+                            create_storage_item, get_player_inventory,
+                            get_item_for_craft, get_items_for_craft,
+                            get_player_with_items,
+                            get_player_with_resources_for_craft,
+                            inventory_repository,
+                            player_item_storage_repository, get_inventory_item_with_stats, get_player_with_stats,
+                            get_equip_item_with_specific_type, create_equip_item,
+                            get_player_with_all_items, equip_item_repository, get_player_with_inventory_items)
+from app.schemas import (CraftItemSchema, EquipItemSchema, ItemLocation,
+                         ItemResponseSchema, PlayerItemsSchema, TransferItemSchema, PlayerEquipItemResponseSchema,
+                         ItemSchema)
+from app.serialization.item import (serialize_items, serialize_item_recipe,
+                                    serialize_player_items)
 from app.services.base import BaseService, BaseTransferService
-from app.services.player import PlayerResponseService, PlayerService
-from app.services.validation import ValidationService
+from app.services.player import PlayerService
+from app.validation.item import (validate_item_before_delete,
+                                 validate_item_before_transfer)
+from app.validation.player import (can_player_craft_item,
+                                   can_player_transfer_items,
+                                   validate_player, validate_inventory_item, validate_player_before_unequip_item)
 
 
 class ItemContainer(ABC):
-    def __init__(self, player: Player):
+    def __init__(self, player: Player) -> None:
         self.player = player
 
     @abstractmethod
@@ -25,7 +36,7 @@ class ItemContainer(ABC):
         pass
 
     @abstractmethod
-    async def create_item(self, session: AsyncSession, item: Item, count: int) -> None:
+    async def create_item(self, session: AsyncSession, item: PlayerItemStorage | Inventory, count: int) -> None:
         pass
 
 
@@ -33,183 +44,104 @@ class StorageContainer(ItemContainer):
     def get_item(self) -> list:
         return self.player.base.items
 
-    async def create_item(self, session: AsyncSession, item: Item, count: int) -> None:
-        schema = StorageItemCreateSchema(player_base_id=self.player.base.id, **item.__dict__)
-        schema.count = count
-        await player_item_storage_repository.create(session, schema)
+    async def create_item(self, session: AsyncSession, item: PlayerItemStorage, count: int) -> None:
+        create_storage_item(session, item.item_id, count, self.player.base.id, self.player.id, item.tier)
 
 
 class InventoryContainer(ItemContainer):
     def get_item(self) -> list:
         return self.player.inventory
 
-    async def create_item(self, session: AsyncSession, item: Item, count: int) -> None:
-        schema = InventoryItemCreateSchema(**item.__dict__)
-        schema.count = count
-        await inventory_repository.create(session, schema)
+    async def create_item(self, session: AsyncSession, item: Inventory, count: int) -> None:
+        create_inventory_item(session, item.item_id, self.player.id, count, item.tier)
 
 
 class ItemService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def get_items(self, map_id: int, telegram_id: int) -> list[ItemResponseSchema]:
-        player = await self.get_player_for_item_recipe(telegram_id, map_id)
-        items = await item_repository.get_multi(
-            self.session,
-            options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
-        )
-        response = self.serialize_item_recipe(items, player)
+        player = await get_player_with_resources_for_craft(self.session, telegram_id, map_id)
+        items = await get_items_for_craft(self.session)
+        response = serialize_item_recipe(items, player)
         return response
 
-    async def get_player_for_item_recipe(self, telegram_id: int, map_id: int):
-        player = await player_repository.get(
-            self.session,
-            options=[
-                joinedload(Player.base),
-                joinedload(Player.resources),
-            ],
-            player_id=telegram_id,
-            map_id=map_id
-        )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        return player
-
-    @staticmethod
-    def serialize_item_recipe(items: Sequence[Item], player: Player) -> list[ItemResponseSchema]:
-        response = [
-            ItemResponseSchema(
-                id=item.id,
-                name=item.name,
-                can_craft=ValidationService.does_user_have_enough_resources(item.recipe, player.resources),
-                icon=item.icon,
-                recipe=RecipeSchema(
-                    resources=[
-                        ResourceCountSchema(
-                            id=recipe.resource.id,
-                            name=recipe.resource.name,
-                            count=recipe.resource_quantity,
-                            icon=recipe.resource.icon
-                        ) for recipe in item.recipe
-                    ]
-                ),
-            )
-            for item in items
-        ]
-
-        return response
-
-    async def delete(self, telegram_id: int, map_id: int, item_id: int, count: int, item_location: ItemLocation):
-        player = await self.get_player_with_items(self.session, telegram_id, map_id)
-
+    async def delete(
+            self,
+            telegram_id: int,
+            map_id: int,
+            item_id: int,
+            count: int,
+            item_location: ItemLocation
+    ) -> PlayerItemsSchema:
+        player = await get_player_with_items(self.session, telegram_id, map_id)
+        validate_player(player)
+        player_id = player.id
         if item_location.value == "inventory":
             repository = inventory_repository
         elif item_location.value == "storage":
             repository = player_item_storage_repository
-
+        else:
+            raise HTTPException(status_code=404, detail="Direction not found")
         item = await repository.get(self.session, id=item_id, player_id=player.id)
-        ValidationService.validate_item_before_delete(item, count)
+        validate_item_before_delete(item, count)
 
         await self.update_item_after_delete(item, count)
         await BaseService.commit_or_rollback(self.session)
-        await self.session.refresh(player)
-        return self.serialize_player_items(player)
+        player = await get_player_with_all_items(self.session, player_id)
+        return serialize_player_items(player)
 
-    async def update_item_after_delete(self, item: Inventory, count: int):
+    async def update_item_after_delete(self, item: Inventory, count: int) -> None:
         if item.count == count:
             await self.session.delete(item)
         else:
             item.count -= count
 
-    @staticmethod
-    async def get_player_with_items(session: AsyncSession, telegram_id: int, map_id: int) -> Player:
-        player = await player_repository.get(
-            session,
-            options=[
-                joinedload(Player.inventory).joinedload(Inventory.item),
-                joinedload(Player.base).joinedload(PlayerBase.items).joinedload(PlayerItemStorage.item),
-            ],
-            player_id=telegram_id,
-            map_id=map_id
+    async def craft(self, telegram_id: int, craft_data: CraftItemSchema) -> list[ItemSchema]:
+        player = await get_player_with_resources_for_craft(
+            self.session,
+            telegram_id,
+            craft_data.map_id
         )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        return player
-
-    async def craft(self, telegram_id: int, craft_data: CraftItemSchema) -> list[ItemSchemaResponse] | None:
-        player = await self._get_player_with_items_and_resources(telegram_id, craft_data.map_id)
-        item = await self._get_item(craft_data.item_id)
-        ValidationService.can_player_craft_item(player, item)
-
+        item = await get_item_for_craft(self.session, craft_data.item_id)
+        can_player_craft_item(player, item)
+        player_id = player.id
         for recipe in item.recipe:
             PlayerService.update_resources(
                 player.resources, recipe.resource_id, recipe.resource_quantity, "decrease"
             )
 
-        self._update_inventory_items_after_craft(player, item)
+        await self._update_inventory_items_after_craft(player, item)
 
         await BaseService.commit_or_rollback(self.session)
-        await self.session.refresh(player)
 
-        return PlayerResponseService.serialize_inventory(player.inventory)
+        player_inventory = await get_player_inventory(self.session, player_id)
+        return serialize_items(player_inventory)
 
-    async def _get_item(self, item_id: int):
-        item = await item_repository.get(
-            self.session,
-            options=[joinedload(Item.recipe).joinedload(ItemRecipe.resource)],
-            id=item_id
-        )
-        if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
-        return item
-
-    async def _get_player_with_items_and_resources(self, telegram_id: int, map_id: int):
-        player = await player_repository.get(
-            self.session,
-            options=[
-                joinedload(Player.resources),
-                joinedload(Player.base).joinedload(PlayerBase.items),
-                joinedload(Player.inventory).joinedload(Inventory.item)
-            ],
-            player_id=telegram_id,
-            map_id=map_id
-        )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        return player
-
-    def _update_inventory_items_after_craft(self, player: Player, item: Item):
+    async def _update_inventory_items_after_craft(self, player: Player, item: Item) -> None:
         player.inventory.sort(key=lambda i: i.count)
 
         if not player.inventory or not any(inv.item == item for inv in player.inventory):
-            player_inventory = Inventory(player_id=player.id, item_id=item.id)
-            self.session.add(player_inventory)
+            await create_player_inventory(self.session, player.id, item.id)
         else:
             for items in player.inventory:
                 if items.item_id == item.id and items.count < item.max_count:
                     items.count += 1
                     return
-            player_inventory = Inventory(player_id=player.id, item_id=item.id)
-            self.session.add(player_inventory)
-
-    @staticmethod
-    def serialize_player_items(player: Player) -> PlayerItemsSchema:
-        storage_items = PlayerResponseService.serialize_storage_items(player.base.items)
-        inventory_items = PlayerResponseService.serialize_inventory(player.inventory)
-        return PlayerItemsSchema(storage_items=storage_items, inventory_items=inventory_items)
+            await create_player_inventory(self.session, player.id, item.id)
 
 
 class ItemTransferService(BaseTransferService):
     async def transfer(self, telegram_id: int, transfer_data: TransferItemSchema) -> PlayerItemsSchema:
-        player = await ItemService.get_player_with_items(self.session, telegram_id, transfer_data.map_id)
-        ValidationService.can_player_transfer_items(player, transfer_data.direction.value)
+        player = await get_player_with_items(self.session, telegram_id, transfer_data.map_id)
+        validate_player(player)
+        player_id = player.id
+        can_player_transfer_items(player, transfer_data.direction.value)
         await self._update_items_after_transfer(player, transfer_data.item_id, transfer_data.direction.value,
                                                 transfer_data.count)
         await BaseService.commit_or_rollback(self.session)
-        self.session.expire_all()
-        await self.session.refresh(player)
-        return ItemService.serialize_player_items(player)
+        player = await get_player_with_all_items(self.session, player_id)
+        return serialize_player_items(player)
 
     async def _update_items_after_transfer(self, player: Player, item_id: int, direction: str, count: int) -> None:
         if direction == "to_storage":
@@ -217,8 +149,13 @@ class ItemTransferService(BaseTransferService):
         elif direction == "from_storage":
             await self._move_item_from_storage(player, item_id, count)
 
-    async def _move_item(self, source_item: Item, count: int, target_container: ItemContainer):
-        max_count = source_item.item.max_count
+    async def _move_item(
+            self,
+            source_item: PlayerItemStorage | Inventory,
+            count: int,
+            target_container: ItemContainer
+    ) -> None:
+        max_count = source_item.item.max_count  # type: ignore[attr-defined]
         existing_item = next(
             (inv for inv in target_container.get_item() if
              inv.item_id == source_item.item_id and inv.count < max_count), None
@@ -238,52 +175,70 @@ class ItemTransferService(BaseTransferService):
         else:
             source_item.count -= count
 
-        await BaseService.commit_or_rollback(self.session)
-
     async def _move_item_to_storage(self, player: Player, item_id: int, count: int) -> None:
-        item = await inventory_repository.get(self.session, id=item_id, player_id=player.id)
-        self._validate_item(item, player.id, count)
+        item = await inventory_repository.get_by_id(self.session, item_id)
+        validate_item_before_transfer(item, player.id, count)
         container = StorageContainer(player)
         await self._move_item(item, count, container)
 
     async def _move_item_from_storage(self, player: Player, item_id: int, count: int) -> None:
-        item = await player_item_storage_repository.get(self.session, id=item_id, player_id=player.id)
-        self._validate_item(item, player.id, count)
+        item = await player_item_storage_repository.get_by_id(self.session, item_id)
+        validate_item_before_transfer(item, player.id, count)
         container = InventoryContainer(player)
         await self._move_item(item, count, container)
-
-    def _validate_item(self, item: Optional[Union[Inventory, PlayerItemStorage]], player_id: int, count: int) -> None:
-        if not item or item.player_id != player_id:
-            raise HTTPException(status_code=404, detail="Item not found")
-        if count > item.count:
-            raise HTTPException(status_code=404, detail="Player not have enough items")
 
 
 class ItemEquipService(BaseService):
 
-    async def equip(self, telegram_id: int, equip_data: EquipItemSchema):
-        player = await self.get_player_with_inventory_items(telegram_id, equip_data.map_id)
-        player_item = await inventory_repository.get(self.session, id=equip_data.item_id, player_id=player.id)
-        self._validate_equip(player_item, player)
-        player_item.active = False if player_item.active else True
-        await BaseService.commit_or_rollback(self.session)
-        return PlayerResponseService.serialize_inventory(player.inventory)
-
-    async def get_player_with_inventory_items(self, telegram_id: int, map_id: int):
-        player = await player_repository.get(
-            self.session,
-            options=[joinedload(Player.inventory).joinedload(Inventory.item)],
-            player_id=telegram_id,
-            map_id=map_id
+    async def equip(self, telegram_id: int, equip_data: EquipItemSchema) -> PlayerEquipItemResponseSchema:
+        player = await get_player_with_stats(self.session, telegram_id=telegram_id, map_id=equip_data.map_id)
+        validate_player(player)
+        player_id = player.id
+        player_inventory_item = await get_inventory_item_with_stats(self.session, player.id, equip_data.item_id)
+        validate_inventory_item(player_inventory_item)
+        player_equip_item = await get_equip_item_with_specific_type(
+            self.session, player_id=player.id, item_type=player_inventory_item.item.type
         )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
+        await self.update_items(player, player_equip_item, player_inventory_item)
+        await BaseService.commit_or_rollback(self.session)
 
-    def _validate_equip(self, player_item: Inventory, player: Player):
-        if not player_item:
-            raise HTTPException(status_code=404, detail="Item not found")
-        if next((inv_item for inv_item in player.inventory if self._is_matching_item(inv_item, player_item)), None):
-            raise HTTPException(status_code=409, detail="Player has already taken this slot")
+        player_items = await get_player_with_all_items(self.session, player_id)
+        return PlayerEquipItemResponseSchema(stats=player.stats, items=serialize_player_items(player_items))
 
-    def _is_matching_item(self, inv_item: Inventory, player_item: Inventory):
-        return inv_item.active and not player_item.active and inv_item.item_id == player_item.item_id
+    async def unequip(self, telegram_id: int, equip_data: EquipItemSchema) -> PlayerEquipItemResponseSchema:
+        player = await get_player_with_inventory_items(self.session, telegram_id=telegram_id, map_id=equip_data.map_id)
+        validate_player(player)
+        player_id = player.id
+        player_equip_item = await equip_item_repository.get(self.session, id=equip_data.item_id, player_id=player_id)
+        validate_player_before_unequip_item(player_equip_item, player)
+        self._update_stats(player_equip_item.item.stats, player, "unequip")
+        create_inventory_item(
+            self.session, player_equip_item.item_id, player.id, player_equip_item.tier
+        )
+        await self.session.delete(player_equip_item)
+        await BaseService.commit_or_rollback(self.session)
+        player_items = await get_player_with_all_items(self.session, player_id)
+        return PlayerEquipItemResponseSchema(stats=player.stats, items=serialize_player_items(player_items))
+
+    async def update_items(self, player: Player, player_equip_item: EquipItem,
+                           player_inventory_item: Inventory) -> None:
+        if player_equip_item:
+            self._update_stats(player_equip_item.item.stats, player, "unequip")
+            create_inventory_item(
+                self.session, player_equip_item.item_id, player.id, player_equip_item.tier
+            )
+            await self.session.delete(player_equip_item)
+        create_equip_item(
+            self.session, player_id=player.id, item_id=player_inventory_item.item.id, tier=player_inventory_item.tier
+        )
+        self._update_stats(player_inventory_item.item.stats, player, "equip")
+        await self.session.delete(player_inventory_item)
+
+    def _update_stats(self, item_stats: ItemStat, player: Player, operation: str) -> None:
+        for stat in item_stats.__annotations__:
+            if stat != id:
+                if hasattr(player.stats, stat):
+                    item_value = getattr(item_stats, stat)
+                    player_value = getattr(player.stats, stat)
+                    setattr(player.stats, stat, player_value + item_value
+                    if operation == "equip" else player_value - item_value)

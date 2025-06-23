@@ -23,5 +23,5 @@ async def get_maps(
 async def get_map(
         map_id: int,
         session: Annotated[AsyncSession, Depends(get_async_session)]
-):
+) -> MapResponseSchema:
     return await MapService(session).get_map_with_objects(map_id)

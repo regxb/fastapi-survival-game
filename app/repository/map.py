@@ -1,6 +1,6 @@
 from sqlalchemy import and_, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.util import map_bits
+from sqlalchemy.orm import joinedload
 
 from app.models.map import Map, MapObject, MapObjectPosition, ResourcesZone
 from app.repository.base import BaseRepository
@@ -36,3 +36,25 @@ async def check_placement_on_map(
     result = await session.execute(stmt)
     map_objects = result.scalar()
     return False if map_objects else True
+
+async def get_map_objects(session: AsyncSession, map_id: int):
+    # map_objects = await map_repository.get(
+    #     self.session,
+    #     options=[
+    #         joinedload(Map.map_objects),
+    #         joinedload(Map.map_objects).joinedload(MapObject.position),
+    #         joinedload(Map.map_objects).joinedload(MapObject.resource_zone).joinedload(ResourcesZone.resource),
+    #         joinedload(Map.map_objects).joinedload(MapObject.resource_zone).joinedload(ResourcesZone.farm_modes)
+    #     ],
+    #     id=map_id)
+
+    stmt = (
+        select(Map).where(Map.id == map_id)
+        .options(
+            joinedload(Map.map_objects),
+            joinedload(Map.map_objects).joinedload(MapObject.position),
+            joinedload(Map.map_objects).joinedload(MapObject.resource_zone).joinedload(ResourcesZone.resource),
+        )
+    )
+    result = await session.execute(stmt)
+    return result.unique().scalar_one_or_none()

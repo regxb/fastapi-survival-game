@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FarmStatus(Enum):
@@ -34,7 +34,7 @@ class FarmModeSchema(BaseModel):
 
 class StartFarmResourcesSchema(BaseModel):
     map_id: int
-    total_minutes: int
+    total_minutes: int = Field(ge=1)
 
 class StopFarmResourcesSchema(BaseModel):
     map_id: int

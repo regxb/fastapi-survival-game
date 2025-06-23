@@ -1,7 +1,8 @@
-from sqlalchemy import ForeignKey, UniqueConstraint, CheckConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import BIGINT
 
+from app.models import EquipItem, ItemStat
 from app.models.base import Base
 from app.models.farm import FarmSession
 from app.models.item import Item
@@ -17,20 +18,28 @@ class Player(Base):
     name: Mapped[str] = mapped_column(default='Player')
     health: Mapped[int] = mapped_column(default=100)
     energy: Mapped[int] = mapped_column(default=100)
-    resource_multiplier: Mapped[int] = mapped_column(default=1)
-    energy_multiplier: Mapped[int] = mapped_column(default=1)
     inventory_slots: Mapped[int] = mapped_column(default=10)
     status: Mapped[str] = mapped_column(default="waiting")
     map_id: Mapped[int] = mapped_column(ForeignKey('maps.id'))
     map_object_id: Mapped[int] = mapped_column(ForeignKey('map_objects.id'), default=1)
 
     map_object: Mapped["MapObject"] = relationship("MapObject", back_populates="players")
-    resources: Mapped[list["PlayerResources"]] = relationship("PlayerResources", uselist=True, lazy="joined")
+    resources: Mapped[list["PlayerResources"]] = relationship("PlayerResources", uselist=True)
     farm_sessions: Mapped[list["FarmSession"]] = relationship("FarmSession", uselist=True)
-    base: Mapped["PlayerBase"] = relationship("PlayerBase", back_populates="player", lazy="joined")
-    inventory: Mapped[list["Inventory"]] = relationship("Inventory", uselist=True, lazy="joined")
+    base: Mapped["PlayerBase"] = relationship("PlayerBase", back_populates="player")
+    inventory: Mapped[list["Inventory"]] = relationship("Inventory", uselist=True)
+    equip_item: Mapped[list["EquipItem"]] = relationship("EquipItem", uselist=True)
+    stats: Mapped["PlayerStats"] = relationship("PlayerStats")
 
     __table_args__ = (UniqueConstraint('player_id', 'map_id', name='idx_uniq_player_id'),)
+
+
+class PlayerStats(Base):
+    __tablename__ = 'player_stats'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
+    damage: Mapped[int] = mapped_column(default=0)
+    armor: Mapped[int] = mapped_column(default=0)
 
 
 class PlayerResources(Base):
@@ -53,13 +62,8 @@ class Inventory(Base):
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'))
     tier: Mapped[int] = mapped_column(default=1)
     count: Mapped[int] = mapped_column(default=1)
-    active: Mapped[bool] = mapped_column(default=False)
 
-    item: Mapped["Item"] = relationship("Item", lazy="joined")
-
-
-    def __repr__(self):
-        return f"<Inventory(id={self.id}, item={self.item.name}, count={self.count})>"
+    item: Mapped["Item"] = relationship("Item")
 
 
 class PlayerBase(Base):
@@ -73,8 +77,8 @@ class PlayerBase(Base):
 
     map_object: Mapped["MapObject"] = relationship("MapObject")
     player: Mapped["Player"] = relationship("Player", back_populates="base")
-    resources: Mapped[list["PlayerResourcesStorage"]] = relationship("PlayerResourcesStorage", uselist=True, lazy="joined")
-    items: Mapped[list["PlayerItemStorage"]] = relationship("PlayerItemStorage", uselist=True, lazy="joined")
+    resources: Mapped[list["PlayerResourcesStorage"]] = relationship("PlayerResourcesStorage", uselist=True)
+    items: Mapped[list["PlayerItemStorage"]] = relationship("PlayerItemStorage", uselist=True)
 
 
 class PlayerResourcesStorage(Base):
@@ -86,7 +90,7 @@ class PlayerResourcesStorage(Base):
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
 
-    resource: Mapped["Resource"] = relationship("Resource", lazy="joined")
+    resource: Mapped["Resource"] = relationship("Resource")
 
 
 class PlayerItemStorage(Base):
@@ -99,4 +103,4 @@ class PlayerItemStorage(Base):
     player_base_id: Mapped[int] = mapped_column(ForeignKey('players_bases.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
 
-    item: Mapped["Item"] = relationship("Item", lazy="joined")
+    item: Mapped["Item"] = relationship("Item")

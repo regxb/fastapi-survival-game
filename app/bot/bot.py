@@ -1,4 +1,4 @@
-from aiogram import Dispatcher, Bot
+from aiogram import Bot, Dispatcher
 
 from app.bot.handlers.start import router
 from app.core.config import BOT_TOKEN

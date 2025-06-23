@@ -2,7 +2,6 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
-from app.models.farm import FarmMode
 from app.models.resource import Resource
 
 
@@ -54,4 +53,3 @@ class ResourcesZone(Base):
 
     map_object: Mapped["MapObject"] = relationship("MapObject", back_populates="resource_zone")
     resource: Mapped["Resource"] = relationship("Resource", back_populates="resource_zone")
-    farm_modes: Mapped[list["FarmMode"]] = relationship("FarmMode", uselist=True)

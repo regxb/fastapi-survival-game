@@ -23,7 +23,9 @@ class ItemSchema(BaseModel):
     name: str
     tier: int
     icon: str
-    count: int
+    damage: Optional[int] = 0
+    armor: Optional[int] = 0
+    count: Optional[int] = 1
     type: Optional[str]
 
     model_config = ConfigDict(populate_by_name=True)
@@ -31,7 +33,6 @@ class ItemSchema(BaseModel):
 
 class ItemSchemaResponse(ItemSchema):
     id: int
-    active_item: bool = False
 
 
 class CraftItemSchema(BaseModel):

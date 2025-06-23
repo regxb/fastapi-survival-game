@@ -35,7 +35,7 @@ class MapObjectCreateSchema(BaseModel):
 
 class ResourceZoneSchema(BaseModel):
     resource: Optional[ResourceSchema]
-    farm_modes: Optional[list[FarmModeLevelSchema]]
+    # farm_modes: Optional[list[FarmModeLevelSchema]]
 
     model_config = ConfigDict(from_attributes=True)
 

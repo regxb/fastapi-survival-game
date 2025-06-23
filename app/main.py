@@ -13,7 +13,7 @@ from app.api.players import router as players_router
 from app.api.resources import router as resources_router
 from app.api.telegram import router as telegram_router
 from app.bot.bot import bot, dp
-from app.core.config import DEV, APP_URL, TG_SECRET
+from app.core.config import APP_URL, DEV, TG_SECRET
 from app.depends.deps import check_auth
 
 

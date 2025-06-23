@@ -7,20 +7,14 @@ from starlette.testclient import TestClient
 
 from app.core.database import TEST_DATABASE_URL, get_async_session
 from app.main import app
-from app.models import (BuildingCost, FarmMode, Inventory, Item, ItemRecipe,
+from app.models import (BuildingCost, Inventory, Item, ItemRecipe,
                         Map, MapObject, MapObjectPosition, Player, PlayerBase,
-                        PlayerItemStorage, PlayerResources, Resource,
-                        ResourcesZone, PlayerResourcesStorage)
+                        PlayerItemStorage, PlayerResources,
+                        PlayerResourcesStorage, Resource, ResourcesZone, PlayerStats, ItemStat)
 from app.models.base import Base
 
 engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-async_session_maker = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+async_session_maker = async_sessionmaker(engine, class_=AsyncSession)
 
 
 def pytest_collection_modifyitems(items):
@@ -104,15 +98,6 @@ async def resources_zone(db_session, resources):
 
 
 @pytest.fixture
-async def farming_mode(db_session, resources_zone):
-    wood_easy_farm_mode = FarmMode(
-        mode="easy", total_minutes=1, total_energy=5, total_resources=10, resource_zone_id=1
-    )
-    db_session.add(wood_easy_farm_mode)
-    await db_session.commit()
-
-
-@pytest.fixture
 async def building_cost(db_session, resources):
     building_cost1 = BuildingCost(type="base", resource_id=1, resource_quantity=10)
     db_session.add(building_cost1)
@@ -126,6 +111,8 @@ async def building_cost(db_session, resources):
 async def player(db_session, map_with_objects):
     player = Player(map_id=1, player_id=111, name="test_name")
     db_session.add(player)
+    player_stats = PlayerStats(player_id=1, damage=0, armor=0)
+    db_session.add(player_stats)
     await db_session.commit()
     return player
 
@@ -139,6 +126,7 @@ async def player_resources(db_session, player, resources):
     await db_session.commit()
     return [player_resources1, player_resources2]
 
+
 @pytest.fixture
 async def map_(db_session):
     map_ = Map(height=333, width=333)
@@ -146,12 +134,14 @@ async def map_(db_session):
     await db_session.commit()
     return map_
 
+
 @pytest.fixture
 async def player_base(db_session, player, map_):
     player_base = PlayerBase(map_object_id=1, map_id=1, owner_id=1)
     db_session.add(player_base)
     await db_session.commit()
     return player_base
+
 
 @pytest.fixture
 async def player_base_with_resources(db_session, player, map_, resources):
@@ -162,12 +152,14 @@ async def player_base_with_resources(db_session, player, map_, resources):
     await db_session.commit()
     return player_base
 
+
 @pytest.fixture
 async def player_outside_base(db_session, player, map_):
     player_base = PlayerBase(map_object_id=2, map_id=1, owner_id=1)
     db_session.add(player_base)
     await db_session.commit()
     return player_base
+
 
 @pytest.fixture
 async def player_with_items(db_session, player, item):
@@ -179,8 +171,10 @@ async def player_with_items(db_session, player, item):
 
 @pytest.fixture
 async def item(db_session):
-    item = Item(name="test_name", icon="icon.svg", max_count=1, type="test")
+    item = Item(name="test_name", icon="icon.svg", max_count=1, type="test", can_equip=True)
     db_session.add(item)
+    item_stats = ItemStat(item_id=1, damage=15, armor=0)
+    db_session.add(item_stats)
     await db_session.commit()
 
 
@@ -189,7 +183,6 @@ async def items_recipe(db_session, item, resources):
     item_recipe = ItemRecipe(item_id=1, resource_id=1, resource_quantity=5)
     db_session.add(item_recipe)
     await db_session.commit()
-    # return item_recipe
 
 
 @pytest.fixture

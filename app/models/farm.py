@@ -16,14 +16,3 @@ class FarmSession(Base):
     map_id: Mapped[int] = mapped_column(ForeignKey('maps.id'))
     resource_id: Mapped[int] = mapped_column(ForeignKey('resources.id'))
     player_id: Mapped[int] = mapped_column(ForeignKey('players.id'))
-
-
-class FarmMode(Base):
-    __tablename__ = 'farm_modes'
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    mode: Mapped[str]
-    total_minutes: Mapped[int]
-    total_energy: Mapped[int]
-    total_resources: Mapped[int]
-    resource_zone_id: Mapped[int] = mapped_column(ForeignKey("resources_zones.id"))

@@ -3,7 +3,7 @@ from typing import Annotated
 from aiogram import types
 from fastapi import APIRouter, Header
 
-from app.bot.bot import dp,bot
+from app.bot.bot import bot, dp
 from app.core.config import TG_SECRET
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"], include_in_schema=False)

@@ -2,9 +2,10 @@ from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Mapped
 
 from app.schemas.farm import FarmSessionSchema
-from app.schemas.item import ItemSchemaResponse
+from app.schemas.item import ItemSchemaResponse, ItemSchema
 from app.schemas.resource import ResourceCountSchema
 
 
@@ -22,8 +23,8 @@ class PlayerBaseCreateDBSchema(BaseModel):
 
 class PlayerBaseSchema(BaseModel):
     map_object_id: int
-    resources: Optional[list]
-    items: Optional[list]
+    resources: Optional[list[ResourceCountSchema]] = None
+    # items: Optional[list]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,22 +37,29 @@ class BasePlayerSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PlayerStatsSchema(BaseModel):
+    damage: int
+    armor: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PlayerSchema(BaseModel):
     id: int
     name: str
     energy: int
-    # resource_multiplier: float
-    # energy_multiplier: float
     status: str
     health: int
     inventory_slots: int
     map_id: int
     map_object_id: int
     in_base: bool
+    stats: PlayerStatsSchema
     base: Optional[PlayerBaseSchema] = None
     farm_sessions: Optional[FarmSessionSchema] = None
     resources: Optional[list[ResourceCountSchema]] = None
-    items: Optional[list[ItemSchemaResponse]] = None
+    inventory_items: Optional[list[ItemSchema]] = None
+    equip_items: Optional[list[ItemSchema]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,8 +74,14 @@ class PlayerResourcesSchema(BaseModel):
 class PlayerItemsSchema(BaseModel):
     inventory_items: Optional[list] = None
     storage_items: Optional[list] = None
+    equip_items: Optional[list] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlayerEquipItemResponseSchema(BaseModel):
+    stats: PlayerStatsSchema
+    items: Optional[PlayerItemsSchema] = None
 
 
 class PlayerCreateSchema(BaseModel):
@@ -90,12 +104,6 @@ class ResourcesStorageCreate(BaseModel):
     resource_id: int
     player_id: int
     resource_quantity: int
-
-
-class PlayerInventoryResponseSchema(BaseModel):
-    items: list
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PlayerMoveSchema(BaseModel):

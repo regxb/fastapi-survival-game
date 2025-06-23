@@ -15,20 +15,20 @@ from app.services.player import PlayerService
 router = APIRouter(prefix="/players", tags=["Players"])
 
 
-@router.post("/", response_model=PlayerSchema)
+@router.post("/")
 async def create_player(
         player_data: PlayerCreateSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
 ):
-    return await PlayerService(session).create(user, player_data)
+    return await PlayerService(session).create_player(user, player_data)
 
 
 @router.get("/", response_model=list[BasePlayerSchema])
 async def get_players(
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
-):
+) -> list[BasePlayerSchema]:
     return await PlayerService(session).get_players(user.id)
 
 
@@ -37,7 +37,7 @@ async def get_player(
         map_id: int,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
-):
+) -> PlayerSchema:
     return await PlayerService(session).get(map_id, user.id)
 
 
@@ -46,5 +46,5 @@ async def move_player(
         player_data: PlayerMoveSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
         session: Annotated[AsyncSession, Depends(get_async_session)]
-):
+) -> PlayerMoveResponseSchema:
     return await PlayerService(session).move(user.id, player_data)

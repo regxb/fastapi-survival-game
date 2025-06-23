@@ -11,7 +11,7 @@ TEST_DATABASE_URL = f"postgresql+asyncpg://{config.TEST_DB_USER}:{config.TEST_DB
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 engine = create_async_engine(DATABASE_URL, echo=False)
-async_session_maker = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+async_session_maker = async_sessionmaker(bind=engine, class_=AsyncSession)
 
 
 redis_client = redis.Redis(host=config.REDIS_HOST, port=config.REDIS_PORT, db=config.REDIS_DB, password=config.REDIS_PASSWORD)

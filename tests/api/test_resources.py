@@ -3,7 +3,6 @@ from sqlalchemy import select
 
 from app.models import Player, PlayerResourcesStorage
 
-
 # @pytest.mark.asyncio
 # async def test_start_farm(client, db_session, test_broker, map_with_objects, farming_mode):
 #     player = Player(map_id=1, player_id=111, name="test_name", map_object_id=2)

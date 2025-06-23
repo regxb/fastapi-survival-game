@@ -1,22 +1,20 @@
+import asyncio
 import json
 from datetime import datetime, timedelta
 
-from fastapi import HTTPException
+from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
-from taskiq.compat import model_validate
 
 from app.core.database import redis_client
-from app.models import MapObject, Player, Resource, ResourcesZone, FarmSession, PlayerResources
-from app.repository import (farm_session_repository,
-                            player_repository)
-from app.schemas import (StartFarmResourcesSchema, FarmSessionCreateSchema,
-                         FarmSessionSchema, StopFarmResourcesSchema, StopFarmingResourcesSchema)
+from app.models import (Resource, PlayerResources)
+from app.repository import farm_session_repository, player_repository, get_player_with_resources_and_zone_resources, \
+    get_player_resource_quantity, get_player_with_specific_resource
+from app.schemas import (FarmSessionCreateSchema, FarmSessionSchema,
+                         StartFarmResourcesSchema, StopFarmResourcesSchema)
 from app.services.base import BaseService
-from app.services.item import ItemService
-from app.services.player import PlayerResponseService
-from app.services.validation import ValidationService
+from app.validation.farm import validate_farm_session
+from app.validation.player import validate_player_before_farming, validate_player
 
 
 class FarmingService:
@@ -24,24 +22,9 @@ class FarmingService:
         self.session = session
 
     async def start_farming(self, farm_data: StartFarmResourcesSchema, telegram_id: int) -> FarmSessionSchema:
-        player = await player_repository.get(
-            self.session,
-            options=[
-                joinedload(Player.map_object).
-                joinedload(MapObject.resource_zone).
-                joinedload(ResourcesZone.resource),
-                joinedload(Player.resources)
-            ],
-            player_id=telegram_id,
-            map_id=farm_data.map_id,
-        )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-
-        ValidationService.can_player_do_something(player)
-        ValidationService.is_farmable_area(player.map_object)
-        ValidationService.can_player_start_farming(player.energy, farm_data.total_minutes)
-
+        player = await get_player_with_resources_and_zone_resources(self.session, telegram_id, farm_data.map_id)
+        validate_player_before_farming(player, farm_data.total_minutes)
+        player_id = player.id
         player.status = "farming"
 
         farm_session = await farm_session_repository.create(
@@ -55,57 +38,78 @@ class FarmingService:
             )
         )
 
-        await self._publish_farm_task(farm_data.total_minutes, farm_session, player.resources)
+        farm_session_id = farm_session.id
+        resource_id = farm_session.resource_id
+        total_seconds = int((farm_session.end_time - farm_session.start_time).total_seconds())
+        seconds_pass = int((datetime.now() - farm_session.start_time).total_seconds())
 
         await BaseService.commit_or_rollback(self.session)
 
-        total_seconds = int((farm_session.end_time - farm_session.start_time).total_seconds())
-        seconds_pass = int((datetime.now() - farm_session.start_time).total_seconds())
+        player_resource_quantity = await get_player_resource_quantity(self.session, player_id, resource_id)
+
+        await self._publish_farm_task(
+            farm_data.total_minutes,
+            player_resource_quantity,
+            farm_session_id,
+            resource_id,
+            player_id,
+        )
+
         return FarmSessionSchema(total_seconds=total_seconds, seconds_pass=seconds_pass)
+
+    @staticmethod
+    async def update_player_resources_while_farming(
+            session: AsyncSession,
+            resource_id: int,
+            player_id: int,
+            minute: int,
+            multiplier: int
+    ):
+        player = await get_player_with_specific_resource(session, player_id, resource_id)
+        if player.status != "farming":
+            raise ValueError("Player is not farming")
+        base_gain = 1
+        if minute % 5 == 0:
+            multiplier += 1
+        if not player.resources:
+            player_resource = PlayerResources(
+                player_id=player.id, resource_id=resource_id, resource_quantity=base_gain * multiplier
+            )
+            session.add(player_resource)
+        else:
+            player.resources[0].resource_quantity += base_gain * multiplier
+        player.energy -= 1
+        await asyncio.sleep(60)
+        await BaseService.commit_or_rollback(session)
 
     async def stop_farming(self, telegram_id: int, farm_data: StopFarmResourcesSchema):
         player = await player_repository.get(
-            self.session,
-            options=[
-                joinedload(Player.map_object),
-                joinedload(Player.resources).joinedload(PlayerResources.resource),
-                joinedload(Player.farm_sessions.and_(FarmSession.status == "in_progress"))
-            ],
-            player_id=telegram_id,
-            map_id=farm_data.map_id,
+            self.session, player_id=telegram_id, map_id=farm_data.map_id, status="farming"
         )
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-
-        ValidationService.is_farmable_area(player.map_object)
-
-        if player.status == "farming" and player.farm_sessions[0].status == "in_progress":
-            player.status = "waiting"
-            player.farm_sessions[0].status = "completed"
-            await BaseService.commit_or_rollback(self.session)
-            player_resources = PlayerResponseService.serialize_resources(player.resources)
-
-            return StopFarmingResourcesSchema(
-                player_energy=player.energy,
-                player_health=player.health,
-                resources=player_resources
-            )
-        else:
-            raise HTTPException(status_code=400, detail="Something went wrong")
+        validate_player(player)
+        farm_session = await farm_session_repository.get(
+            self.session, player_id=player.id, status="in_progress", map_id=farm_data.map_id
+        )
+        validate_farm_session(farm_session)
+        player.status = "waiting"
+        farm_session.status = "completed"
+        await BaseService.commit_or_rollback(self.session)
+        return status.HTTP_204_NO_CONTENT
 
     async def _publish_farm_task(
             self,
             total_minutes: int,
-            farm_session: FarmSession,
-            resources: list[PlayerResources]
+            resource_count: int,
+            farm_session_id: int,
+            resource_id: int,
+            player_id: int,
     ) -> None:
-        resources_before_farming = next((r for r in resources if r.resource_id == farm_session.resource_id), None)
         task_data = {
             "total_minutes": total_minutes,
-            "farm_session_id": farm_session.id,
-            "status": farm_session.status,
-            "resource_id": farm_session.resource_id,
-            "resources_before_farming": resources_before_farming.resource_quantity
+            "farm_session_id": farm_session_id,
+            "resource_id": resource_id,
+            "player_id": player_id,
+            "resources_before_farming": resource_count if resource_count else 0
         }
         redis_client.rpush('task_queue', json.dumps(task_data))
 
