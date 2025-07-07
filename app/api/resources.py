@@ -19,7 +19,7 @@ async def get_resources(session: Annotated[AsyncSession, Depends(get_async_sessi
     return await FarmingService(session).get_resources()
 
 
-@router.patch("/farm/start", response_model=FarmSessionSchema)
+@router.patch("/farm/start/", response_model=FarmSessionSchema)
 async def start_farm_resources(
         farm_data: StartFarmResourcesSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
@@ -28,7 +28,7 @@ async def start_farm_resources(
     return await FarmingService(session).start_farming(farm_data, user.id)
 
 
-@router.patch("/farm/stop")
+@router.patch("/farm/stop/")
 async def stop_farm_resources(
         farm_data: StopFarmResourcesSchema,
         user: Annotated[WebAppUser, Depends(get_user_data_from_request)],
